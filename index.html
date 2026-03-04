@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XPENG Manual Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0B0F19; color: #E2E8F0; font-family: 'Prompt', sans-serif; }
+        .glass { background: rgba(26, 32, 44, 0.8); backdrop-filter: blur(10px); border: 1px solid #2D3748; border-radius: 20px; }
+        mark { background-color: #FFD600; color: black; padding: 0 2px; border-radius: 3px; font-weight: 600; }
+        .btn-cyan { background-color: #00D2FF; color: #0B0F19; font-weight: 700; transition: 0.3s; }
+        .btn-cyan:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    </style>
+</head>
+<body class="py-12">
+    <div class="max-w-3xl mx-auto px-6">
+        <header class="text-center mb-10">
+            <div class="bg-white px-8 py-6 rounded-3xl shadow-2xl inline-block mb-6 w-full max-w-[350px]">
+                <img src="logo.png" class="w-full h-auto object-contain" alt="XPENG Logo">
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2 uppercase">XPENG Assistant</h1>
+            <p class="text-gray-500 text-xs tracking-widest uppercase">by X-Tech RAMA 2</p>
+        </header>
+
+        <div class="glass p-8 mb-8">
+            <div class="flex flex-col md:flex-row gap-4 mb-6">
+                <select id="carModel" class="bg-slate-900 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none md:w-1/3">
+                    <option value="G6">XPENG G6</option>
+                    <option value="X9">XPENG X9</option>
+                </select>
+                <input type="text" id="searchInput" class="flex-grow bg-slate-900 border border-slate-700 text-white px-6 py-3 rounded-xl outline-none focus:border-cyan-400" placeholder="พิมพ์คำค้นหา เช่น แบตเตอรี่, ยาง...">
+                <button onclick="doSearch()" class="btn-cyan px-8 py-3 rounded-xl">ค้นหา</button>
+            </div>
+        </div>
+
+        <div id="statusMsg" class="text-center text-gray-500 italic mb-6"></div>
+        <div id="resArea" class="hidden space-y-4">
+            <h2 class="text-lg font-medium text-cyan-400 mb-4 border-l-4 border-cyan-400 pl-3">ผลการค้นหา</h2>
+            <div id="resultsList" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = "http://127.0.0.1:5000"; // เปลี่ยนเป็น URL ของ Render ถ้าออนไลน์แล้ว
+
+        async function doSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            const model = document.getElementById('carModel').value;
+            const list = document.getElementById('resultsList');
+            const area = document.getElementById('resArea');
+            const status = document.getElementById('statusMsg');
+            
+            if (!query) return;
+
+            status.innerHTML = `<p class="text-cyan-400 animate-pulse">กำลังสแกนคู่มือ...</p>`;
+            list.innerHTML = "";
+            area.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${BASE_URL}/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query, model: model })
+                });
+
+                const data = await response.json();
+                status.innerHTML = "";
+                area.classList.remove('hidden');
+
+                if (data.length === 0) {
+                    list.innerHTML = `<div class="p-10 text-center text-gray-500 bg-slate-800/50 rounded-2xl">ไม่พบข้อมูล "${query}"</div>`;
+                } else {
+                    data.forEach(item => {
+                        const regex = new RegExp(`(${query})`, 'gi');
+                        const highlightedText = item.text.replace(regex, '<mark>$1</mark>');
+                        // สร้างลิงก์เปิด PDF พร้อมระบุหน้า
+                        const pdfUrl = `${BASE_URL}/view/${item.model}#page=${item.page}`;
+
+                        const card = document.createElement('div');
+                        card.className = 'glass p-6 text-left';
+                        card.innerHTML = `
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="bg-cyan-900/30 text-cyan-400 px-3 py-1 rounded text-xs font-bold">หน้า ${item.page}</span>
+                                <a href="${pdfUrl}" target="_blank" class="text-xs text-cyan-400 hover:underline">📌 เปิด PDF หน้านี้</a>
+                            </div>
+                            <div class="text-gray-300 text-sm leading-relaxed">${highlightedText}</div>
+                        `;
+                        list.appendChild(card);
+                    });
+                }
+            } catch (error) {
+                status.innerHTML = `<p class="text-red-400">❌ เชื่อมต่อ Server ไม่ได้ (ลองรัน python app.py)</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
