@@ -5,7 +5,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}}) # ปรับให้รับได้ทุกทาง
 
 # Cache สำหรับเก็บข้อความจาก PDF เพื่อการค้นหาที่รวดเร็ว
 manual_cache = {}
@@ -113,4 +113,3 @@ if __name__ == '__main__':
     # บน Render ต้องใช้ port จาก environment variable หรือ default เป็น 5000
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-    
