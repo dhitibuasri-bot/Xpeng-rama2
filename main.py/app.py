@@ -109,7 +109,7 @@ def search():
     return jsonify(results[:20])
 
 if __name__ == '__main__':
-    # โหลดข้อมูลเข้า Memory ก่อนเริ่ม Server
     preload_manuals()
-    # รันบน Port 5000 (รองรับการเข้าถึงจากภายนอก)
-    app.run(host='0.0.0.0', port=5000)
+    # บน Render ต้องใช้ port จาก environment variable หรือ default เป็น 5000
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
