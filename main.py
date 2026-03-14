@@ -1,18 +1,12 @@
 import os
 import re
-import fitz
-from flask import Flask, request, jsonify, send_from_directory, make_response
+import fitz  # PyMuPDF
+from flask import Flask, request, jsonify, send_file, make_response
 from flask_cors import CORS
-from datetime import datetime
+import io
 
 app = Flask(__name__)
 CORS(app)
-
-def clean_thai_text(text):
-    if not text: return ""
-    text = re.sub(r'(?<=[\u0e00-\u0e7f])\s+(?=[\u0e00-\u0e7f])', '', text)
-    text = text.replace('\n', ' ')
-    return re.sub(r'\s+', ' ', text).strip()
 
 def get_manual_path(model):
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -23,58 +17,63 @@ def get_manual_path(model):
     full_path = os.path.join(base_dir, filename)
     return full_path if os.path.exists(full_path) else None
 
-@app.route('/')
-def home():
-    return jsonify({"status": "online"})
-
 @app.route('/view/<model>')
 def view_pdf(model):
     path = get_manual_path(model)
-    if not path: return "File not found", 404
+    page_num = request.args.get('page', default=1, type=int)
     
-    # ใช้ send_from_directory ที่รองรับ Conditional Requests (Byte Ranges) โดยธรรมชาติ
-    response = make_response(send_from_directory(
-        os.path.dirname(path), 
-        os.path.basename(path)
-    ))
-    
-    # บังคับ Header เพื่อให้ Browser พยายามเปิดที่หน้าต้นทาง
-    response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = 'inline'
-    response.headers['Accept-Ranges'] = 'bytes' # บอก Browser ว่า "ขอโหลดแค่บางส่วนของไฟล์ได้นะ"
-    return response
+    if not path: return "ไม่พบไฟล์", 404
+
+    try:
+        # เปิดไฟล์ PDF และดึงเฉพาะหน้าที่ต้องการ
+        with fitz.open(path) as doc:
+            # page_num - 1 เพราะ PDF เริ่มนับจาก 0
+            actual_page = max(0, min(page_num - 1, len(doc) - 1))
+            
+            # สร้าง PDF ใหม่ที่มีแค่หน้าเดียว
+            new_doc = fitz.open()
+            new_doc.insert_pdf(doc, from_page=actual_page, to_page=actual_page)
+            
+            # แปลงเป็น Bytes เพื่อส่งออก
+            pdf_bytes = new_doc.write()
+            new_doc.close()
+
+            # ส่งไฟล์กลับไป (เป็นไฟล์หน้าเดียว)
+            output = io.BytesIO(pdf_bytes)
+            return send_file(
+                output,
+                mimetype='application/pdf',
+                as_attachment=False,
+                download_name=f"{model}_page_{page_num}.pdf"
+            )
+    except Exception as e:
+        return str(e), 500
 
 @app.route('/search', methods=['POST'])
 def search():
+    # ... (โค้ดค้นหาเดิมของคุณ ใช้ได้เลยไม่ต้องแก้) ...
     data = request.get_json()
     query = data.get('query', '').strip()
     model = data.get('model', 'G6').upper()
-    if not query: return jsonify([])
-
     path = get_manual_path(model)
     if not path: return jsonify([])
-
+    
     results = []
     search_q = query.replace(" ", "").lower()
-
     try:
         with fitz.open(path) as doc:
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
                 text = page.get_text("text")
-                clean_text = clean_thai_text(text)
-                if search_q in clean_text.replace(" ", "").lower():
-                    found_idx = clean_text.lower().find(query.lower())
-                    start = max(0, found_idx - 60)
+                if search_q in text.replace(" ", "").lower():
                     results.append({
                         "page": page_num + 1,
-                        "text": f"...{clean_text[start:start+250]}...",
+                        "text": text[:300].strip(),
                         "model": model
                     })
                 if len(results) >= 15: break
         return jsonify(results)
-    except:
-        return jsonify([])
+    except: return jsonify([])
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))

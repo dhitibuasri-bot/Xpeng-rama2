@@ -13,6 +13,18 @@
         .btn-cyan { background-color: #00D2FF; color: #0B0F19; font-weight: 700; transition: 0.3s; cursor: pointer; }
         .btn-cyan:hover { transform: translateY(-2px); filter: brightness(1.1); }
         .btn-cyan:disabled { background-color: #4A5568; cursor: not-allowed; }
+        
+        /* สไตล์เสริมสำหรับการโหลด */
+        .loading-dots:after {
+            content: '.';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: ''; }
+        }
     </style>
 </head>
 <body class="py-12">
@@ -21,57 +33,80 @@
             <div class="bg-white px-8 py-6 rounded-3xl shadow-2xl inline-block mb-6 w-full max-w-[350px]">
                 <img src="logo.png" class="w-full h-auto object-contain" alt="XPENG Logo">
             </div>
-            <h1 class="text-3xl font-bold text-white mb-2 uppercase">XPENG Assistant</h1>
-            <p class="text-gray-500 text-xs tracking-widest uppercase">by X-Tech RAMA 2</p>
+            <h1 class="text-3xl font-bold text-white mb-2 uppercase tracking-tight">XPENG Assistant</h1>
+            <p class="text-gray-500 text-xs tracking-[0.2em] uppercase font-medium">by X-Tech RAMA 2</p>
         </header>
 
         <div class="glass p-8 mb-8">
-            <div class="flex flex-col md:flex-row gap-4 mb-6">
-                <select id="carModel" class="bg-slate-900 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none md:w-1/3">
+            <div class="flex flex-col md:flex-row gap-4 mb-2">
+                <select id="carModel" class="bg-slate-900 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none md:w-1/3 focus:border-cyan-400">
                     <option value="G6">XPENG G6</option>
                     <option value="X9">XPENG X9</option>
                 </select>
-                <input type="text" id="searchInput" class="flex-grow bg-slate-900 border border-slate-700 text-white px-6 py-3 rounded-xl outline-none focus:border-cyan-400" placeholder="พิมพ์คำค้นหา เช่น แบตเตอรี่, ยาง...">
-                <button id="searchBtn" onclick="doSearch()" class="btn-cyan px-8 py-3 rounded-xl">ค้นหา</button>
+                <div class="relative flex-grow">
+                    <input type="text" id="searchInput" 
+                        class="w-full bg-slate-900 border border-slate-700 text-white px-6 py-3 rounded-xl outline-none focus:border-cyan-400" 
+                        placeholder="ค้นหา เช่น ยาง, แบตเตอรี่, ปัดน้ำฝน...">
+                </div>
+                <button id="searchBtn" onclick="doSearch()" class="btn-cyan px-8 py-3 rounded-xl min-w-[120px]">
+                    ค้นหา
+                </button>
             </div>
+            <p class="text-slate-500 text-[10px] ml-1 mt-2">* ระบบจะตัดหน้าเฉพาะที่เกี่ยวข้องส่งมาให้เพื่อความรวดเร็วและประหยัดเน็ต</p>
         </div>
 
-        <div id="statusMsg" class="text-center text-gray-500 italic mb-6"></div>
+        <div id="statusMsg" class="text-center mb-6"></div>
+
         <div id="resArea" class="hidden space-y-4">
-            <h2 class="text-lg font-medium text-cyan-400 mb-4 border-l-4 border-cyan-400 pl-3">ผลการค้นหา</h2>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-medium text-cyan-400 border-l-4 border-cyan-400 pl-3">ผลการค้นหา</h2>
+                <span id="matchCount" class="text-slate-500 text-xs uppercase tracking-widest"></span>
+            </div>
             <div id="resultsList" class="space-y-4"></div>
         </div>
     </div>
 
     <script>
+        // เปลี่ยนเป็น URL ของคุณบน Render
         const BASE_URL = "https://xpeng-rama2.onrender.com"; 
 
+        /**
+         * ฟังก์ชันเปิด PDF แบบตัดหน้า
+         * แก้ไข: ส่งเลขหน้าผ่าน Query Parameter (?page=x) 
+         * เพื่อให้ Backend ตัดเฉพาะหน้านั้นส่งกลับมา จบปัญหาเด้งไปหน้าแรก
+         */
         function openPdf(model, page) {
-            // สร้าง URL ตรงๆ โดยไม่มีพารามิเตอร์อื่นมาคั่น เพื่อให้ Fragment #page ทำงานได้ดีที่สุด
-            const pdfUrl = `${BASE_URL}/view/${model}#page=${page}`;
+            const pdfUrl = `${BASE_URL}/view/${model}?page=${page}`;
             
-            // สร้าง Element <a> ชั่วคราวเพื่อคลิก (วิธีนี้เสถียรกว่า window.open บนมือถือ)
-            const link = document.createElement('a');
-            link.href = pdfUrl;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // เปิดหน้าต่างใหม่
+            const newWindow = window.open(pdfUrl, '_blank');
+            
+            // ป้องกันเบราว์เซอร์บล็อก popup
+            if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                const link = document.createElement('a');
+                link.href = pdfUrl;
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
         }
 
         async function doSearch() {
-            const query = document.getElementById('searchInput').value.trim();
+            const queryInput = document.getElementById('searchInput');
+            const query = queryInput.value.trim();
             const model = document.getElementById('carModel').value;
             const list = document.getElementById('resultsList');
             const area = document.getElementById('resArea');
             const status = document.getElementById('statusMsg');
             const btn = document.getElementById('searchBtn');
+            const countLabel = document.getElementById('matchCount');
             
             if (!query) return;
 
+            // เริ่มสถานะการค้นหา
             btn.disabled = true;
-            status.innerHTML = `<p class="text-cyan-400 animate-pulse">กำลังสแกนคู่มือ...</p>`;
+            status.innerHTML = `<p class="text-cyan-400 font-medium">กำลังค้นหาข้อมูลในคู่มือ ${model}<span class="loading-dots"></span></p>`;
             list.innerHTML = "";
             area.classList.add('hidden');
 
@@ -82,25 +117,42 @@
                     body: JSON.stringify({ query: query, model: model })
                 });
 
+                if (!response.ok) throw new Error("Server response error");
+
                 const data = await response.json();
+                
                 status.innerHTML = "";
                 btn.disabled = false;
                 area.classList.remove('hidden');
 
                 if (!data || data.length === 0) {
-                    list.innerHTML = `<div class="p-10 text-center text-gray-400 bg-slate-800/50 rounded-2xl border border-dashed border-slate-600">ไม่พบข้อมูล "${query}" ในคู่มือรุ่น ${model}</div>`;
+                    countLabel.innerText = "0 matches";
+                    list.innerHTML = `
+                        <div class="p-12 text-center text-gray-400 bg-slate-800/30 rounded-3xl border border-dashed border-slate-700">
+                            <p class="mb-2">ไม่พบคำว่า <span class="text-white font-semibold">"${query}"</span> ในรุ่น ${model}</p>
+                            <p class="text-xs">ลองใช้คำค้นหาที่สั้นลง หรือใกล้เคียง</p>
+                        </div>`;
                 } else {
+                    countLabel.innerText = `${data.length} matches`;
                     data.forEach(item => {
+                        // Highlight คำค้นหาในเนื้อหาที่แสดง
                         const regex = new RegExp(`(${query})`, 'gi');
                         const highlightedText = item.text.replace(regex, '<mark>$1</mark>');
 
                         const card = document.createElement('div');
-                        card.className = 'glass p-6 text-left border-l-4 border-transparent hover:border-cyan-400 transition-all';
+                        card.className = 'glass p-6 text-left border-l-4 border-transparent hover:border-cyan-400 transition-all hover:bg-slate-800/40 cursor-default group';
                         card.innerHTML = `
                             <div class="flex justify-between items-center mb-4">
-                                <span class="bg-cyan-900/40 text-cyan-400 px-3 py-1 rounded text-xs font-bold">หน้า ${item.page}</span>
-                                <button onclick="openPdf('${item.model}', ${item.page})" class="text-xs text-cyan-400 hover:text-white transition flex items-center gap-1 font-bold">
-                                    📌 เปิดดูต้นฉบับหน้า ${item.page}
+                                <div class="flex items-center gap-3">
+                                    <span class="bg-cyan-900/40 text-cyan-400 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tighter">หน้า ${item.page}</span>
+                                    <span class="text-slate-600 text-[10px] uppercase font-bold tracking-widest">${item.model}</span>
+                                </div>
+                                <button onclick="openPdf('${item.model}', ${item.page})" 
+                                    class="text-[11px] text-cyan-400 hover:text-white transition-colors flex items-center gap-1.5 font-semibold group-hover:bg-cyan-950/30 py-1 px-2 rounded-md">
+                                    <span>🔍 เปิดหน้านี้</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
                                 </button>
                             </div>
                             <div class="text-gray-300 text-sm leading-relaxed">${highlightedText}</div>
@@ -110,10 +162,15 @@
                 }
             } catch (error) {
                 btn.disabled = false;
-                status.innerHTML = `<p class="text-red-400">❌ ไม่สามารถเชื่อมต่อระบบได้ กรุณารอ Server ตื่นสักครู่</p>`;
+                status.innerHTML = `
+                    <div class="bg-red-950/20 border border-red-900/50 p-4 rounded-2xl">
+                        <p class="text-red-400 text-sm italic">❌ การเชื่อมต่อล้มเหลว: กรุณารอสักครู่เพื่อให้ Server เริ่มทำงานแล้วลองใหม่</p>
+                    </div>`;
+                console.error("Search Error:", error);
             }
         }
 
+        // ฟังการกด Enter
         document.getElementById('searchInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') doSearch();
         });
