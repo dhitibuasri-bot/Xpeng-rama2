@@ -46,10 +46,18 @@
     <script>
         const BASE_URL = "https://xpeng-rama2.onrender.com"; 
 
-        // ฟังก์ชันสำคัญ: เปิด PDF ไปยังหน้าที่กำหนด
         function openPdf(model, page) {
+            // สร้าง URL ตรงๆ โดยไม่มีพารามิเตอร์อื่นมาคั่น เพื่อให้ Fragment #page ทำงานได้ดีที่สุด
             const pdfUrl = `${BASE_URL}/view/${model}#page=${page}`;
-            window.open(pdfUrl, '_blank');
+            
+            // สร้าง Element <a> ชั่วคราวเพื่อคลิก (วิธีนี้เสถียรกว่า window.open บนมือถือ)
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         async function doSearch() {
@@ -63,7 +71,7 @@
             if (!query) return;
 
             btn.disabled = true;
-            status.innerHTML = `<p class="text-cyan-400 animate-pulse">กำลังสแกนคู่มือ... (รอปลุก Server สักครู่)</p>`;
+            status.innerHTML = `<p class="text-cyan-400 animate-pulse">กำลังสแกนคู่มือ...</p>`;
             list.innerHTML = "";
             area.classList.add('hidden');
 
