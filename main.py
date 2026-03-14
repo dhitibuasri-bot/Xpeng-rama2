@@ -1,8 +1,9 @@
 import os
 import re
-import fitz  # PyMuPDF
+import fitz
 from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
@@ -31,14 +32,16 @@ def view_pdf(model):
     path = get_manual_path(model)
     if not path: return "File not found", 404
     
-    # ส่งไฟล์พร้อมระบุ Header ให้เปิดแบบ Inline
+    # ใช้ send_from_directory ที่รองรับ Conditional Requests (Byte Ranges) โดยธรรมชาติ
     response = make_response(send_from_directory(
         os.path.dirname(path), 
         os.path.basename(path)
     ))
+    
+    # บังคับ Header เพื่อให้ Browser พยายามเปิดที่หน้าต้นทาง
     response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = 'inline' # สำคัญ: บอก Browser ให้เปิดอ่านทันที
-    response.headers['Accept-Ranges'] = 'bytes'
+    response.headers['Content-Disposition'] = 'inline'
+    response.headers['Accept-Ranges'] = 'bytes' # บอก Browser ว่า "ขอโหลดแค่บางส่วนของไฟล์ได้นะ"
     return response
 
 @app.route('/search', methods=['POST'])
@@ -65,7 +68,7 @@ def search():
                     start = max(0, found_idx - 60)
                     results.append({
                         "page": page_num + 1,
-                        "text": f"...{clean_text[start:start+300]}...",
+                        "text": f"...{clean_text[start:start+250]}...",
                         "model": model
                     })
                 if len(results) >= 15: break
