@@ -5,7 +5,7 @@ from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app)
 
 def clean_thai_text(text):
     if not text: return ""
@@ -24,33 +24,32 @@ def get_manual_path(model):
 
 @app.route('/')
 def home():
-    return jsonify({"status": "online", "message": "XPENG Assistant API is running"})
+    return jsonify({"status": "online"})
 
 @app.route('/view/<model>')
 def view_pdf(model):
     path = get_manual_path(model)
-    if not path: return "ไม่พบไฟล์", 404
+    if not path: return "File not found", 404
     
-    # ส่งไฟล์และบังคับ Header ให้รองรับ Byte Ranges (ช่วยเรื่องการโหลดหน้า PDF)
+    # ส่งไฟล์พร้อมระบุ Header ให้เปิดแบบ Inline
     response = make_response(send_from_directory(
         os.path.dirname(path), 
-        os.path.basename(path),
-        mimetype='application/pdf'
+        os.path.basename(path)
     ))
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'inline' # สำคัญ: บอก Browser ให้เปิดอ่านทันที
     response.headers['Accept-Ranges'] = 'bytes'
     return response
 
 @app.route('/search', methods=['POST'])
 def search():
     data = request.get_json()
-    if not data: return jsonify([])
-    
     query = data.get('query', '').strip()
     model = data.get('model', 'G6').upper()
-    
     if not query: return jsonify([])
+
     path = get_manual_path(model)
-    if not path: return jsonify({"error": "Model path not found"}), 404
+    if not path: return jsonify([])
 
     results = []
     search_q = query.replace(" ", "").lower()
@@ -61,21 +60,18 @@ def search():
                 page = doc.load_page(page_num)
                 text = page.get_text("text")
                 clean_text = clean_thai_text(text)
-                
                 if search_q in clean_text.replace(" ", "").lower():
                     found_idx = clean_text.lower().find(query.lower())
                     start = max(0, found_idx - 60)
-                    snippet = clean_text[start:start+300]
-                    
                     results.append({
                         "page": page_num + 1,
-                        "text": f"...{snippet.strip()}...",
+                        "text": f"...{clean_text[start:start+300]}...",
                         "model": model
                     })
                 if len(results) >= 15: break
         return jsonify(results)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except:
+        return jsonify([])
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
