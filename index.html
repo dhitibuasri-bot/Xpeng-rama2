@@ -44,8 +44,13 @@
     </div>
 
     <script>
-        // ตรวจสอบว่า BASE_URL ถูกต้อง (ต้องมี https:// และไม่มี / ต่อท้าย)
         const BASE_URL = "https://xpeng-rama2.onrender.com"; 
+
+        // ฟังก์ชันสำคัญ: เปิด PDF ไปยังหน้าที่กำหนด
+        function openPdf(model, page) {
+            const pdfUrl = `${BASE_URL}/view/${model}#page=${page}`;
+            window.open(pdfUrl, '_blank');
+        }
 
         async function doSearch() {
             const query = document.getElementById('searchInput').value.trim();
@@ -57,45 +62,38 @@
             
             if (!query) return;
 
-            // ตั้งค่า UI เริ่มต้น
             btn.disabled = true;
-            status.innerHTML = `<p class="text-cyan-400 animate-pulse">กำลังสแกนคู่มือ... (หากค้นหาครั้งแรกอาจใช้เวลา 30-60 วินาทีเพื่อปลุก Server)</p>`;
+            status.innerHTML = `<p class="text-cyan-400 animate-pulse">กำลังสแกนคู่มือ... (รอปลุก Server สักครู่)</p>`;
             list.innerHTML = "";
             area.classList.add('hidden');
 
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 60000); // รอสูงสุด 60 วินาที
-
                 const response = await fetch(`${BASE_URL}/search`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: query, model: model }),
-                    signal: controller.signal
+                    body: JSON.stringify({ query: query, model: model })
                 });
 
-                clearTimeout(timeoutId);
                 const data = await response.json();
-                
                 status.innerHTML = "";
                 btn.disabled = false;
                 area.classList.remove('hidden');
 
                 if (!data || data.length === 0) {
-                    list.innerHTML = `<div class="p-10 text-center text-gray-400 bg-slate-800/50 rounded-2xl border border-dashed border-slate-600">ไม่สามารถยืนยันข้อมูล "${query}" ในคู่มือรุ่น ${model} ได้</div>`;
+                    list.innerHTML = `<div class="p-10 text-center text-gray-400 bg-slate-800/50 rounded-2xl border border-dashed border-slate-600">ไม่พบข้อมูล "${query}" ในคู่มือรุ่น ${model}</div>`;
                 } else {
                     data.forEach(item => {
-                        // Highlight คำค้นหา
                         const regex = new RegExp(`(${query})`, 'gi');
                         const highlightedText = item.text.replace(regex, '<mark>$1</mark>');
-                        const pdfUrl = `${BASE_URL}/view/${item.model}#page=${item.page}`;
 
                         const card = document.createElement('div');
                         card.className = 'glass p-6 text-left border-l-4 border-transparent hover:border-cyan-400 transition-all';
                         card.innerHTML = `
                             <div class="flex justify-between items-center mb-4">
                                 <span class="bg-cyan-900/40 text-cyan-400 px-3 py-1 rounded text-xs font-bold">หน้า ${item.page}</span>
-                                <a href="${pdfUrl}" target="_blank" class="text-xs text-cyan-400 hover:text-white transition">📌 เปิดดูต้นฉบับ PDF</a>
+                                <button onclick="openPdf('${item.model}', ${item.page})" class="text-xs text-cyan-400 hover:text-white transition flex items-center gap-1 font-bold">
+                                    📌 เปิดดูต้นฉบับหน้า ${item.page}
+                                </button>
                             </div>
                             <div class="text-gray-300 text-sm leading-relaxed">${highlightedText}</div>
                         `;
@@ -104,17 +102,11 @@
                 }
             } catch (error) {
                 btn.disabled = false;
-                if (error.name === 'AbortError') {
-                    status.innerHTML = `<p class="text-yellow-400">⚠️ Server ใช้เวลาตอบสนองนานเกินไป กรุณากดค้นหาอีกครั้ง</p>`;
-                } else {
-                    status.innerHTML = `<p class="text-red-400">❌ ไม่สามารถเชื่อมต่อระบบได้ (กรุณาตรวจสอบอินเทอร์เน็ต หรือรอสักครู่ให้ Server ตื่น)</p>`;
-                }
-                console.error("Search Error:", error);
+                status.innerHTML = `<p class="text-red-400">❌ ไม่สามารถเชื่อมต่อระบบได้ กรุณารอ Server ตื่นสักครู่</p>`;
             }
         }
 
-        // รองรับการกด Enter เพื่อค้นหา
-        document.getElementById('searchInput').addEventListener('keypress', function (e) {
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') doSearch();
         });
     </script>
