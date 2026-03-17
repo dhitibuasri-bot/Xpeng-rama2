@@ -19,6 +19,7 @@ def clean_thai_text(text):
     return re.sub(r'\s+', ' ', text).strip()
 
 def get_manual_path(model):
+    # ใช้ Path แบบ Absolute เพื่อป้องกันปัญหาบน Server
     current_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir = os.path.join(current_dir, "manuals")
     model_upper = model.upper()
@@ -29,23 +30,38 @@ def get_manual_path(model):
     return full_path if os.path.exists(full_path) else None
 
 def load_all_manuals():
-    """โหลดข้อความจาก PDF ทั้งหมดเข้า Cache เมื่อ Start Server"""
+    """โหลดข้อความจาก PDF ทั้งหมดเข้า Cache และ Print สถานะออกมาดู"""
+    print("--- START LOADING MANUALS ---")
     for model in ["G6", "X9"]:
         path = get_manual_path(model)
         if path:
             try:
+                print(f"Loading {model} from: {path}")
                 with fitz.open(path) as doc:
+                    pdf_content_cache[model] = [] # ล้างค่าเก่า
                     for page_num in range(len(doc)):
                         page = doc.load_page(page_num)
                         text = clean_thai_text(page.get_text("text"))
                         pdf_content_cache[model].append(text)
-                print(f"Loaded {model} manual: {len(pdf_content_cache[model])} pages.")
+                print(f"✅ SUCCESS: Loaded {model} ({len(pdf_content_cache[model])} pages)")
             except Exception as e:
-                print(f"Error loading {model}: {e}")
+                print(f"❌ ERROR: Could not read {model}: {str(e)}")
+        else:
+            print(f"⚠️ WARNING: File not found for model {model}")
+    print("--- FINISHED LOADING MANUALS ---")
 
 @app.route('/')
 def home():
-    return jsonify({"status": "online", "message": "XPENG Assistant API - Thai Fixed & Range Viewer"})
+    # หน้าแรกจะบอกสถานะว่าโหลดไฟล์เข้า Cache หรือยัง
+    g6_pages = len(pdf_content_cache["G6"])
+    x9_pages = len(pdf_content_cache["X9"])
+    return jsonify({
+        "status": "online",
+        "cache_status": {
+            "G6": f"{g6_pages} pages",
+            "X9": f"{x9_pages} pages"
+        }
+    })
 
 @app.route('/view/<model>')
 def view_pdf(model):
@@ -56,10 +72,7 @@ def view_pdf(model):
     try:
         with fitz.open(path) as doc:
             total_pages = len(doc)
-            # ปรับเป็น 0-indexed
             current_idx = target_page - 1
-            
-            # --- คำนวณช่วงหน้า (ดึงหน้าเป้าหมาย +- 2 หน้า รวมเป็น 5 หน้า) ---
             start_page = max(0, current_idx - 2)
             end_page = min(total_pages - 1, current_idx + 2)
             
@@ -70,7 +83,6 @@ def view_pdf(model):
 
             output = io.BytesIO(pdf_bytes)
             output.seek(0)
-            
             return send_file(
                 output,
                 mimetype='application/pdf',
@@ -86,20 +98,19 @@ def search():
     query = data.get('query', '').strip()
     model = data.get('model', 'G6').upper()
     
-    if not query or model not in pdf_content_cache:
+    # ถ้าพิมพ์มาสั้นไป หรือหา Model ไม่เจอใน Cache ให้ส่งคืนว่าง
+    if not query or model not in pdf_content_cache or not pdf_content_cache[model]:
         return jsonify([])
 
     results = []
-    # ลบช่องว่างในคำค้นหาเพื่อให้หาเจอแม้อักษรใน PDF จะเว้นวรรค
+    # แก้ปัญหาภาษาไทย: ลบช่องว่างในคำค้นหา
     search_q = query.replace(" ", "").lower()
 
     for idx, clean_text in enumerate(pdf_content_cache[model]):
-        # ตรวจสอบแบบไม่สนช่องว่าง
+        # ตรวจสอบแบบไม่สนช่องว่าง (Flat text)
         if search_q in clean_text.replace(" ", "").lower():
-            # พยายามหาตำแหน่งเพื่อทำ Snippet
             found_idx = clean_text.lower().find(query.lower())
-            if found_idx == -1: 
-                found_idx = 0 
+            if found_idx == -1: found_idx = 0 
             
             start = max(0, found_idx - 60)
             snippet = clean_text[start:start+250]
@@ -115,6 +126,7 @@ def search():
     return jsonify(results)
 
 if __name__ == '__main__':
+    # รันโหลดไฟล์ก่อนเริ่ม Server
     load_all_manuals()
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
