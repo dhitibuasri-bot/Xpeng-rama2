@@ -19,55 +19,57 @@ def clean_thai_text(text):
     return re.sub(r'\s+', ' ', text).strip()
 
 def load_pdf_to_cache(model):
-    """ ฟังก์ชันโหลดไฟล์ PDF เข้า Memory """
+    """ ฟังก์ชันโหลดไฟล์ PDF เข้า Memory พร้อมระบุชื่อหน่วยงาน X-tech """
     model = model.upper()
     path = os.path.join(os.getcwd(), "manuals", f"{model}.pdf")
     
     if os.path.exists(path):
         try:
-            print(f"📖 กำลังโหลดไฟล์: {path}")
+            print(f"📖 X-tech System: กำลังโหลดไฟล์ {model} จาก {path}")
             with fitz.open(path) as doc:
                 content = []
                 for page in doc:
                     content.append(clean_thai_text(page.get_text()))
                 pdf_content_cache[model] = content
-            print(f"✅ โหลดสำเร็จ: {model} จำนวน {len(content)} หน้า")
+            print(f"✅ X-tech System: โหลดสำเร็จ {model} ({len(content)} หน้า)")
             return True
         except Exception as e:
-            print(f"❌ เกิดข้อผิดพลาดในการอ่านไฟล์ {model}: {e}")
+            print(f"❌ X-tech System Error: ไม่สามารถอ่านไฟล์ {model} ได้: {e}")
     else:
-        print(f"⚠️ ไม่พบไฟล์ที่ตำแหน่ง: {path}")
+        print(f"⚠️ X-tech System Warning: ไม่พบไฟล์ที่ {path}")
     return False
 
 # --- Routes ---
 
 @app.route('/')
 def home():
-    """ หน้าแรกสำหรับเช็คสถานะ Server """
-    # ถ้า Cache ว่าง ให้พยายามโหลดใหม่
+    """ หน้าแรกสำหรับเช็คสถานะ X-tech Rama 2 Service Support """
+    # บังคับเช็ค Cache ทุกครั้งที่เข้าหน้า Home เพื่อป้องกันข้อมูลหลุด
     if not pdf_content_cache["G6"]: load_pdf_to_cache("G6")
-    if not pdf_content_cache["X9"]: load_data = load_pdf_to_cache("X9")
+    if not pdf_content_cache["X9"]: load_pdf_to_cache("X9")
     
     manuals_dir = os.path.join(os.getcwd(), "manuals")
     files_in_folder = os.listdir(manuals_dir) if os.path.exists(manuals_dir) else "Folder not found"
     
     return jsonify({
-        "status": "online",
-        "cache_status": {m: f"{len(pdf_content_cache[m])} pages" for m in pdf_content_cache},
-        "debug": {
-            "current_dir": os.getcwd(),
-            "files_detected": files_in_folder
+        "service": "X-tech Rama 2 Service Support",
+        "system": "XPENG Assistant Search Engine",
+        "status": "Ready",
+        "cache_status": {m: f"{len(pdf_content_cache[m])} pages loaded" for m in pdf_content_cache},
+        "debug_info": {
+            "current_working_dir": os.getcwd(),
+            "detected_files": files_in_folder
         }
     })
 
 @app.route('/search', methods=['POST'])
 def search():
-    """ ค้นหาข้อความใน PDF """
+    """ ค้นหาข้อความใน PDF สำหรับทีมเทคนิค """
     data = request.get_json() or {}
     query = data.get('query', '').strip()
     model = data.get('model', 'G6').upper()
     
-    # ตรวจสอบว่ามีข้อมูลใน Cache ไหม ถ้าไม่มีให้ลองโหลด
+    # ตรวจสอบ Cache หากว่างให้โหลดทันที (On-demand)
     if not pdf_content_cache.get(model):
         load_pdf_to_cache(model)
         
@@ -75,12 +77,12 @@ def search():
         return jsonify([])
 
     results = []
-    # ค้นหาแบบไม่สนช่องว่างและตัวพิมพ์เล็กใหญ่
+    # ค้นหาแบบไม่สนช่องว่างเพื่อความแม่นยำในภาษาไทย
     search_q = query.replace(" ", "").lower()
     
     for idx, text in enumerate(pdf_content_cache[model]):
         if search_q in text.replace(" ", "").lower():
-            # พยายามหาตำแหน่งคำเพื่อตัด Snippet มาโชว์
+            # หาตำแหน่งคำเพื่อทำ Snippet สั้นๆ
             found_pos = text.lower().find(query.lower())
             start_snip = max(0, found_pos - 60)
             
@@ -90,14 +92,13 @@ def search():
                 "model": model
             })
         
-        # จำกัดผลลัพธ์ไม่ให้เยอะเกินไป (ป้องกันค้าง)
         if len(results) >= 15: break
             
     return jsonify(results)
 
 @app.route('/view/<model>')
 def view_pdf(model):
-    """ แสดงไฟล์ PDF เฉพาะหน้า (ส่งเป็น PDF ขนาดเล็กไปให้) """
+    """ แสดงผลเฉพาะหน้า: หน้าก่อน 1 - หน้าเป้าหมาย - หน้าหลัง 1 """
     model = model.upper()
     path = os.path.join(os.getcwd(), "manuals", f"{model}.pdf")
     target_page = request.args.get('page', default=1, type=int)
@@ -108,12 +109,12 @@ def view_pdf(model):
     try:
         with fitz.open(path) as doc:
             total_pages = len(doc)
-            current_idx = target_page - 1
+            current_idx = target_page - 1 # เปลี่ยนเป็น 0-based index
             
             if current_idx < 0 or current_idx >= total_pages:
-                return f"Page {target_page} not found", 400
+                return f"Page {target_page} out of range", 400
 
-            # ตัดมาเฉพาะหน้าปัจจุบัน และหน้าก่อนหน้า/ถัดไป (รวม 3 หน้าเพื่อความต่อเนื่อง)
+            # --- Logic ตัดหน้าตามโจทย์: หน้าก่อน 1 และ หน้าหลัง 1 ---
             start = max(0, current_idx - 1)
             end = min(total_pages - 1, current_idx + 1)
             
@@ -125,16 +126,18 @@ def view_pdf(model):
             output = io.BytesIO(pdf_bytes)
             output.seek(0)
             
+            # ส่งเป็นไฟล์ PDF ขนาดเล็ก (มี 1-3 หน้า) เพื่อความรวดเร็ว
             return send_file(
                 output,
                 mimetype='application/pdf',
-                as_attachment=False
+                as_attachment=False,
+                download_name=f"Xtech_Rama2_{model}_page_{target_page}.pdf"
             )
     except Exception as e:
-        return str(e), 500
+        return f"X-tech System Error: {str(e)}", 500
 
 # --- Start Server ---
-# โหลดข้อมูลล่วงหน้าตอนรันโปรแกรม
+# โหลดข้อมูลล่วงหน้าก่อนรับ Request
 load_pdf_to_cache("G6")
 load_pdf_to_cache("X9")
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XPENG Assistant</title>
+    <title>X-tech Rama 2 Service Support</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -21,8 +21,8 @@
             <div class="bg-white px-8 py-6 rounded-3xl shadow-2xl inline-block mb-6 w-full max-w-[350px]">
                 <img src="logo.png" class="w-full h-auto object-contain" alt="XPENG Logo">
             </div>
-            <h1 class="text-3xl font-bold text-white mb-2 uppercase">XPENG Assistant</h1>
-            <p class="text-gray-500 text-xs tracking-widest uppercase">Rama 2 Service Support</p>
+            <h1 class="text-3xl font-bold text-white mb-2 uppercase tracking-tight">X-tech Rama 2</h1>
+            <p class="text-cyan-400 text-sm font-medium uppercase tracking-widest">Service Support Assistant</p>
         </header>
 
         <div class="glass p-8 mb-8">
@@ -31,15 +31,15 @@
                     <option value="G6">XPENG G6</option>
                     <option value="X9">XPENG X9</option>
                 </select>
-                <input type="text" id="searchInput" class="flex-grow bg-slate-900 border border-slate-700 text-white px-6 py-3 rounded-xl outline-none focus:border-cyan-400" placeholder="พิมพ์คำค้นหา...">
-                <button id="searchBtn" onclick="doSearch()" class="btn-cyan px-8 py-3 rounded-xl">ค้นหา</button>
+                <input type="text" id="searchInput" class="flex-grow bg-slate-900 border border-slate-700 text-white px-6 py-3 rounded-xl outline-none focus:border-cyan-400" placeholder="ระบุปัญหาหรือหัวข้อที่ต้องการค้นหา...">
+                <button id="searchBtn" onclick="doSearch()" class="btn-cyan px-8 py-3 rounded-xl">ค้นหาข้อมูล</button>
             </div>
         </div>
 
-        <div id="statusMsg" class="text-center text-cyan-400 mb-6 italic min-h-[1.5rem]"></div>
+        <div id="statusMsg" class="text-center text-gray-500 mb-6 italic min-h-[1.5rem] text-sm"></div>
         
         <div id="resArea" class="hidden space-y-4">
-            <h2 class="text-lg font-medium text-cyan-400 border-l-4 border-cyan-400 pl-3 mb-6">ผลการค้นหา</h2>
+            <h2 class="text-lg font-medium text-cyan-400 border-l-4 border-cyan-400 pl-3 mb-6 uppercase tracking-wider">ผลการค้นหาข้อมูลทางเทคนิค</h2>
             <div id="resultsList" class="space-y-4"></div>
         </div>
     </div>
@@ -48,15 +48,8 @@
         const BASE_URL = "https://xpeng-rama2.onrender.com"; 
 
         function openPdf(model, targetPage) {
-            /** * ระบบใหม่: คำนวณหน้าเป้าหมายในไฟล์ที่ตัดมา 5 หน้า 
-             * เช่น ถ้าคลิกหน้า 10, Backend จะส่งหน้า 8, 9, 10, 11, 12 มาให้
-             * หน้า 10 จะกลายเป็นหน้าที่ 3 ของไฟล์ใหม่
-             */
-            const startPage = Math.max(1, targetPage - 2);
-            const relativePage = targetPage - startPage + 1;
-
-            // ส่ง ?page= เพื่อดึงไฟล์ และใช้ #page= เพื่อกระโดดไปยังหน้าที่ถูกต้อง
-            const pdfUrl = `${BASE_URL}/view/${model}?page=${targetPage}#page=${relativePage}`;
+            // เปิดหน้า PDF ที่ตัดมา 3 หน้า (ก่อน-กลาง-หลัง)
+            const pdfUrl = `${BASE_URL}/view/${model}?page=${targetPage}`;
             window.open(pdfUrl, '_blank');
         }
 
@@ -71,7 +64,7 @@
             if (!query) return;
 
             btn.disabled = true;
-            status.innerHTML = "กำลังค้นหาและจัดระเบียบตัวอักษร...";
+            status.innerHTML = "X-tech System กำลังค้นหาข้อมูลในคู่มือ...";
             list.innerHTML = "";
             area.classList.add('hidden');
 
@@ -88,11 +81,10 @@
 
                 if (!data || data.length === 0) {
                     status.innerHTML = "";
-                    list.innerHTML = `<div class="p-10 text-center text-gray-400 bg-slate-800/50 rounded-2xl border border-dashed border-slate-600">ไม่พบคำว่า "${query}" ในคู่มือรุ่น ${model}</div>`;
+                    list.innerHTML = `<div class="p-10 text-center text-gray-400 bg-slate-800/50 rounded-2xl border border-dashed border-slate-600">ไม่พบข้อมูลเกี่ยวกับ "${query}" ในระบบ X-tech</div>`;
                 } else {
-                    status.innerHTML = `<span class="text-gray-400 text-xs">พบข้อมูล ${data.length} จุด (เปิดเพื่อดูเนื้อหา 5 หน้าที่เกี่ยวข้อง)</span>`;
+                    status.innerHTML = `<span class="text-cyan-400 font-semibold">พบข้อมูลเทคนิค ${data.length} จุด</span> <span class="text-gray-500 ml-2">(คลิกเพื่อเปิดเนื้อหา 3 หน้าที่เกี่ยวข้อง)</span>`;
                     data.forEach(item => {
-                        // Highlight คำค้นหา
                         const regex = new RegExp(`(${query})`, 'gi');
                         const highlightedText = item.text.replace(regex, '<mark>$1</mark>');
 
@@ -100,9 +92,9 @@
                         card.className = 'glass p-6 text-left border-l-4 border-transparent hover:border-cyan-400 transition-all cursor-default';
                         card.innerHTML = `
                             <div class="flex justify-between items-center mb-4">
-                                <span class="bg-cyan-900/40 text-cyan-400 px-3 py-1 rounded text-[10px] font-bold uppercase tracking-tight">คู่มือหน้า ${item.page}</span>
+                                <span class="bg-cyan-900/40 text-cyan-400 px-3 py-1 rounded text-[10px] font-bold uppercase tracking-tight">หน้าคู่มือ: ${item.page}</span>
                                 <button onclick="openPdf('${item.model}', ${item.page})" class="text-xs text-cyan-400 hover:text-white transition font-bold flex items-center gap-1">
-                                    <span>📌 เปิดอ่านต้นฉบับ</span>
+                                    <span>🔍 เปิดอ่านไฟล์ (PDF)</span>
                                 </button>
                             </div>
                             <div class="text-gray-300 text-sm leading-relaxed">${highlightedText}</div>
@@ -112,7 +104,7 @@
                 }
             } catch (error) {
                 btn.disabled = false;
-                status.innerHTML = "❌ การเชื่อมต่อล้มเหลว กรุณาลองใหม่";
+                status.innerHTML = "❌ การเชื่อมต่อ X-tech Server ขัดข้อง";
             }
         }
 
