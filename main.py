@@ -8,55 +8,51 @@ import io
 app = Flask(__name__)
 CORS(app)
 
-# --- Config & Cache ---
+# --- Global Cache ---
 pdf_content_cache = {"G6": [], "X9": []}
 
 def clean_thai_text(text):
     if not text: return ""
+    # แก้ปัญหาช่องว่างในภาษาไทย
     text = re.sub(r'(?<=[\u0e00-\u0e7f])\s+(?=[\u0e00-\u0e7f])', '', text)
     text = text.replace('\n', ' ')
     return re.sub(r'\s+', ' ', text).strip()
 
-def find_pdf_file(model_name):
-    """ ค้นหาไฟล์ PDF ในโฟลเดอร์ manuals แบบยืดหยุ่น """
-    manuals_dir = os.path.join(os.getcwd(), "manuals")
-    if not os.path.exists(manuals_dir):
-        return None
-    try:
-        files = os.listdir(manuals_dir)
-        for f in files:
-            if f.lower().endswith('.pdf') and model_name.lower() in f.lower():
-                return os.path.join(manuals_dir, f)
-    except:
-        pass
-    return None
+def find_pdf_path(model):
+    """ หา Path ของไฟล์ PDF """
+    base_path = os.path.join(os.getcwd(), "manuals")
+    filename = f"{model.upper()}.pdf"
+    full_path = os.path.join(base_path, filename)
+    return full_path if os.path.exists(full_path) else None
 
-def load_all_manuals():
-    """ โหลด PDF เข้า Memory """
-    for model in ["G6", "X9"]:
-        path = find_pdf_file(model)
+def ensure_loaded(model):
+    """ ตรวจสอบว่าโหลดข้อมูลหรือยัง ถ้ายังให้โหลดทันที """
+    model = model.upper()
+    if not pdf_content_cache.get(model):
+        path = find_pdf_path(model)
         if path:
             try:
+                print(f"🔄 Loading {model} on demand...")
                 with fitz.open(path) as doc:
                     content = [clean_thai_text(page.get_text()) for page in doc]
                     pdf_content_cache[model] = content
-                print(f"✅ SUCCESS: {model} loaded {len(content)} pages.")
+                print(f"✅ Loaded {model}: {len(content)} pages")
             except Exception as e:
-                print(f"❌ ERROR: {model} failed: {e}")
-        else:
-            print(f"⚠️ NOT FOUND: {model}.pdf")
-
-# บังคับโหลดทันทีที่ Start
-load_all_manuals()
+                print(f"❌ Error loading {model}: {e}")
 
 @app.route('/')
 def home():
+    # เช็คทั้ง G6 และ X9
+    ensure_loaded("G6")
+    ensure_loaded("X9")
+    
     manuals_dir = os.path.join(os.getcwd(), "manuals")
-    files_found = os.listdir(manuals_dir) if os.path.exists(manuals_dir) else "folder_not_found"
+    files = os.listdir(manuals_dir) if os.path.exists(manuals_dir) else []
+    
     return jsonify({
         "status": "online",
-        "cache": {m: f"{len(pdf_content_cache[m])} pages" for m in pdf_content_cache},
-        "manuals_folder_files": files_found
+        "cache_status": {m: f"{len(pdf_content_cache[m])} pages" for m in pdf_content_cache},
+        "files_found": files
     })
 
 @app.route('/search', methods=['POST'])
@@ -64,24 +60,35 @@ def search():
     data = request.get_json() or {}
     query = data.get('query', '').strip()
     model = data.get('model', 'G6').upper()
-    if not query or model not in pdf_content_cache: return jsonify([])
     
+    # บังคับโหลดก่อนค้นหา
+    ensure_loaded(model)
+    
+    if not query or not pdf_content_cache.get(model):
+        return jsonify([])
+
     results = []
     search_q = query.replace(" ", "").lower()
-    for idx, text in enumerate(pdf_content_cache.get(model, [])):
+    
+    for idx, text in enumerate(pdf_content_cache[model]):
         if search_q in text.replace(" ", "").lower():
+            # ดึงข้อความรอบๆ คำที่หาเจอ
+            start_idx = max(0, text.lower().find(query.lower()) - 50)
+            snippet = text[start_idx:start_idx+200]
             results.append({
                 "page": idx + 1,
-                "text": text[:200] + "...",
+                "text": f"...{snippet.strip()}...",
                 "model": model
             })
         if len(results) >= 15: break
+            
     return jsonify(results)
 
 @app.route('/view/<model>')
 def view_pdf(model):
-    path = find_pdf_file(model)
+    path = find_pdf_path(model)
     if not path: return "File not found", 404
+    # ส่งไฟล์ PDF ทั้งไฟล์เพื่อให้ Frontend ไปจัดการเลขหน้าเอง
     return send_file(path, mimetype='application/pdf')
 
 if __name__ == '__main__':
