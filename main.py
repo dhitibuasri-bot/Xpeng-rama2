@@ -1,37 +1,35 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask
+from flask import request
+from flask import jsonify
+from flask import send_file
+
 from flask_cors import CORS
 
 import fitz
 import os
-import re
+
 import gspread
 
-from rapidfuzz import fuzz
+from oauth2client.service_account import ServiceAccountCredentials
 
-from datetime import datetime
+# =========================
+# APP
+# =========================
 
-from oauth2client.service_account import (
-    ServiceAccountCredentials
+app = Flask(
+
+    __name__,
+
+    static_folder='static',
+
+    static_url_path='/static'
+
 )
-
-# =========================
-# FLASK
-# =========================
-
-app = Flask(__name__)
 
 CORS(app)
 
 # =========================
-# CONFIG
-# =========================
-
-PDF_FOLDER = "manuals"
-
-pdf_content_cache = {}
-
-# =========================
-# GOOGLE SHEETS
+# GOOGLE SHEET
 # =========================
 
 scope = [
@@ -53,97 +51,30 @@ creds = ServiceAccountCredentials.from_json_keyfile_name(
 client = gspread.authorize(creds)
 
 sheet = client.open(
+
     "XPENG Referral"
+
 ).sheet1
 
 # =========================
-# SYNONYMS
+# PDF PATH
 # =========================
 
-SYNONYMS = {
+PDFS = {
 
-    "แคมป์": [
+    "G6": "manuals/G6.pdf",
 
-        "camp",
-        "camp mode",
-        "sleep mode",
-        "พัก"
+    "X9": "manuals/X9.pdf",
 
-    ],
-
-    "ลมยาง": [
-
-        "psi",
-        "pressure",
-        "tire pressure"
-
-    ],
-
-    "ชาร์จ": [
-
-        "charging",
-        "charger",
-        "battery"
-
-    ],
-
-    "หน้าจอ": [
-
-        "screen",
-        "display"
-
-    ],
-
-    "กุญแจ": [
-
-        "key",
-        "smart key"
-
-    ]
+    "SCREEN": "manuals/SCEEN.pdf"
 
 }
 
 # =========================
-# CLEAN TEXT
+# PDF DATA
 # =========================
 
-def clean_text(text):
-
-    text = text.replace(
-        "\n",
-        " "
-    )
-
-    text = re.sub(
-        r"\s+",
-        " ",
-        text
-    )
-
-    return text.strip()
-
-# =========================
-# HIGHLIGHT
-# =========================
-
-def highlight_text(text, keyword):
-
-    pattern = re.compile(
-
-        re.escape(keyword),
-
-        re.IGNORECASE
-
-    )
-
-    return pattern.sub(
-
-        lambda m:
-        f"<mark>{m.group(0)}</mark>",
-
-        text
-
-    )
+pdf_data = []
 
 # =========================
 # LOAD PDF
@@ -151,48 +82,33 @@ def highlight_text(text, keyword):
 
 print("\n🔥 Loading PDF manuals...\n")
 
-for filename in os.listdir(PDF_FOLDER):
+for model, path in PDFS.items():
 
-    if filename.endswith(".pdf"):
+    print(f"📄 Loading {path}")
 
-        path = os.path.join(
+    if not os.path.exists(path):
 
-            PDF_FOLDER,
+        print(f"❌ File not found: {path}")
 
-            filename
+        continue
 
-        )
+    doc = fitz.open(path)
 
-        print(f"📄 Loading {filename}")
+    for page_num in range(len(doc)):
 
-        doc = fitz.open(path)
+        page = doc.load_page(page_num)
 
-        pages = []
+        text = page.get_text()
 
-        for page_num, page in enumerate(doc):
+        pdf_data.append({
 
-            text = clean_text(
+            "model": model,
 
-                page.get_text()
+            "page": page_num + 1,
 
-            )
+            "text": text
 
-            pages.append({
-
-                "page": page_num + 1,
-
-                "text": text
-
-            })
-
-        model_name = filename.replace(
-            ".pdf",
-            ""
-        )
-
-        pdf_content_cache[
-            model_name
-        ] = pages
+        })
 
 print("\n✅ PDF Loaded Successfully\n")
 
@@ -203,26 +119,9 @@ print("\n✅ PDF Loaded Successfully\n")
 @app.route("/")
 def home():
 
-    return send_from_directory(
-
-        ".",
+    return send_file(
 
         "index.html"
-
-    )
-
-# =========================
-# STATIC
-# =========================
-
-@app.route("/static/<path:path>")
-def static_files(path):
-
-    return send_from_directory(
-
-        "static",
-
-        path
 
     )
 
@@ -230,10 +129,7 @@ def static_files(path):
 # SEARCH
 # =========================
 
-@app.route(
-    "/search",
-    methods=["POST"]
-)
+@app.route("/search", methods=["POST"])
 def search():
 
     data = request.json
@@ -246,7 +142,7 @@ def search():
 
     ).lower()
 
-    selected_model = data.get(
+    model = data.get(
 
         "model",
 
@@ -254,152 +150,60 @@ def search():
 
     )
 
-    expanded_queries = [query]
-
-    for key, values in SYNONYMS.items():
-
-        if key in query:
-
-            expanded_queries.extend(values)
-
     results = []
 
-    # =========================
-    # SEARCH PDF
-    # =========================
+    for item in pdf_data:
 
-    for model, pages in pdf_content_cache.items():
+        if item["model"] != model:
 
-        if selected_model:
+            continue
 
-            if model.lower() != selected_model.lower():
+        if query in item["text"].lower():
 
-                continue
+            snippet = item["text"][:1200]
 
-        for page_data in pages:
+            results.append({
 
-            content = page_data["text"].lower()
+                "model": item["model"],
 
-            best_score = 0
+                "page": item["page"],
 
-            matched_query = ""
+                "text": snippet
 
-            for q in expanded_queries:
+            })
 
-                score = fuzz.partial_ratio(
+    return jsonify(
 
-                    q,
-
-                    content
-
-                )
-
-                if score > best_score:
-
-                    best_score = score
-
-                    matched_query = q
-
-            if best_score > 70:
-
-                snippet = page_data[
-                    "text"
-                ][:700]
-
-                snippet = highlight_text(
-
-                    snippet,
-
-                    matched_query
-
-                )
-
-                results.append({
-
-                    "model": model,
-
-                    "page": page_data["page"],
-
-                    "score": best_score,
-
-                    "text": snippet
-
-                })
-
-    # =========================
-    # SORT
-    # =========================
-
-    results = sorted(
-
-        results,
-
-        key=lambda x: x["score"],
-
-        reverse=True
+        results[:10]
 
     )
 
-    return jsonify(results[:10])
-
 # =========================
-# VIEW PDF WITH PAGE
+# VIEW PDF
 # =========================
 
 @app.route("/view/<model>")
 def view_pdf(model):
 
-    model = model.upper()
-
     page = request.args.get(
+
         "page",
+
         1
+
     )
 
-    filename = f"{model}.pdf"
+    pdf_path = PDFS.get(model)
 
-    pdf_url = f"/manuals/{filename}#page={page}"
+    if not pdf_path:
 
-    return f"""
+        return "PDF Not Found"
 
-    <!DOCTYPE html>
+    return send_file(
 
-    <html>
+        pdf_path,
 
-    <head>
-
-        <meta charset="UTF-8">
-
-        <script>
-
-            window.location.href = "{pdf_url}"
-
-        </script>
-
-    </head>
-
-    <body>
-
-        กำลังเปิด PDF...
-
-    </body>
-
-    </html>
-
-    """
-
-# =========================
-# MANUAL FILES
-# =========================
-
-@app.route("/manuals/<path:filename>")
-def manuals(filename):
-
-    return send_from_directory(
-
-        PDF_FOLDER,
-
-        filename
+        mimetype="application/pdf"
 
     )
 
@@ -407,64 +211,44 @@ def manuals(filename):
 # REFERRAL
 # =========================
 
-@app.route(
-    "/referral",
-    methods=["POST"]
-)
+@app.route("/referral", methods=["POST"])
 def referral():
 
     data = request.json
 
-    now = datetime.now().strftime(
+    try:
 
-        "%Y-%m-%d %H:%M:%S"
+        sheet.append_row([
 
-    )
+            data.get("your_name"),
 
-    # =========================
-    # SAVE TO GOOGLE SHEETS
-    # =========================
+            data.get("your_phone"),
 
-    sheet.append_row([
+            data.get("friend_name"),
 
-        now,
+            data.get("friend_phone"),
 
-        data.get("your_name"),
+            data.get("model"),
 
-        data.get("your_phone"),
+            data.get("note")
 
-        data.get("friend_name"),
+        ])
 
-        data.get("friend_phone"),
+        return jsonify({
 
-        data.get("model"),
+            "success": True
 
-        data.get("note")
+        })
 
-    ])
+    except Exception as e:
 
-    print("\n🔥 NEW REFERRAL")
+        print(e)
 
-    print(data)
+        return jsonify({
 
-    return jsonify({
+            "success": False
 
-        "success": True
-
-    })
-
-# =========================
-# HEALTH CHECK
-# =========================
-
-@app.route("/health")
-def health():
-
-    return jsonify({
-
-        "status": "ok"
-
-    })
+        })
 
 # =========================
 # RUN
@@ -474,10 +258,10 @@ if __name__ == "__main__":
 
     app.run(
 
-        debug=True,
-
         host="0.0.0.0",
 
-        port=5000
+        port=5000,
+
+        debug=True
 
     )
