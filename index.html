@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        X-tech Rama 2 Service Support
+    </title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap"
+        rel="stylesheet"
+    >
+
+    <style>
+
+        body{
+
+            background:
+            linear-gradient(
+                to bottom,
+                #0B0F19,
+                #111827
+            );
+
+            color:#E2E8F0;
+
+            font-family:
+            'Prompt',
+            sans-serif;
+        }
+
+        .glass{
+
+            background:
+            rgba(26,32,44,0.75);
+
+            backdrop-filter:
+            blur(12px);
+
+            border:
+            1px solid #2D3748;
+
+            border-radius:
+            24px;
+        }
+
+        .btn-cyan{
+
+            background:#00D2FF;
+
+            color:#0B0F19;
+
+            font-weight:700;
+
+            transition:0.3s;
+        }
+
+        .btn-cyan:hover{
+
+            transform:
+            translateY(-2px);
+
+            filter:
+            brightness(1.1);
+        }
+
+        mark{
+
+            background:#FFD600;
+
+            color:black;
+
+            padding:0 4px;
+
+            border-radius:4px;
+
+            font-weight:700;
+        }
+
+    </style>
+
+</head>
+
+<body class="min-h-screen py-12">
+
+    <div class="max-w-5xl mx-auto px-6">
+
+        <!-- ========================= -->
+        <!-- HEADER -->
+        <!-- ========================= -->
+
+        <header class="text-center mb-12">
+
+            <div class="bg-white rounded-3xl p-6 inline-block shadow-2xl mb-6">
+
+                <img
+                    src="/static/logo.png"
+                    class="w-[220px]"
+                    alt="XPENG Logo"
+                >
+
+            </div>
+
+            <h1 class="text-4xl font-bold tracking-tight text-white">
+
+                X-tech Rama 2
+
+            </h1>
+
+            <p class="text-cyan-400 tracking-[0.25em] uppercase text-sm mt-2">
+
+                Service Support Assistant
+
+            </p>
+
+        </header>
+
+        <!-- ========================= -->
+        <!-- SEARCH -->
+        <!-- ========================= -->
+
+        <div class="glass p-8 shadow-2xl mb-10">
+
+            <div class="flex flex-col md:flex-row gap-4">
+
+                <select
+                    id="carModel"
+                    class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-4 text-white md:w-1/3"
+                >
+
+                    <option value="G6">
+                        XPENG G6
+                    </option>
+
+                    <option value="X9">
+                        XPENG X9
+                    </option>
+
+                    <option value="SCREEN">
+                        SCREEN
+                    </option>
+
+                </select>
+
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="ค้นหาข้อมูล เช่น Camp Mode, ลมยาง, ชาร์จ..."
+                    class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-6 py-4 text-white"
+                >
+
+                <button
+                    onclick="doSearch()"
+                    class="btn-cyan px-10 py-4 rounded-xl"
+                >
+
+                    🔍 ค้นหา
+
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- STATUS -->
+
+        <div
+            id="statusMsg"
+            class="text-center text-gray-400 mb-8"
+        >
+
+            ระบบพร้อมค้นหาข้อมูล X-tech
+
+        </div>
+
+        <!-- RESULTS -->
+
+        <div
+            id="resArea"
+            class="hidden"
+        >
+
+            <div class="flex justify-between items-center mb-6">
+
+                <h2 class="text-xl font-bold text-white">
+
+                    ผลการค้นหา
+
+                </h2>
+
+                <span
+                    id="resultCount"
+                    class="bg-cyan-900/40 text-cyan-400 px-4 py-2 rounded-full text-xs"
+                ></span>
+
+            </div>
+
+            <div
+                id="resultsList"
+                class="space-y-4"
+            ></div>
+
+        </div>
+
+        <!-- ========================= -->
+        <!-- REFERRAL -->
+        <!-- ========================= -->
+
+        <div class="mt-20 glass p-10 text-center">
+
+            <h2 class="text-3xl font-bold text-white mb-4">
+
+                🚗 มีเพื่อนสนใจ XPENG?
+
+            </h2>
+
+            <p class="text-gray-400 max-w-2xl mx-auto mb-8">
+
+                หากมีเพื่อนหรือคนรู้จักสนใจ XPENG
+                ทีม X-tech Rama 2 ยินดีดูแลและให้ข้อมูลเพิ่มเติม
+
+            </p>
+
+            <button
+                onclick="openReferralModal()"
+                class="btn-cyan px-10 py-4 rounded-xl"
+            >
+
+                📩 แนะนำเพื่อน
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- ========================= -->
+    <!-- MODAL -->
+    <!-- ========================= -->
+
+    <div
+        id="referralModal"
+        class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50 px-4"
+    >
+
+        <div class="glass p-8 w-full max-w-xl relative">
+
+            <button
+                onclick="closeReferralModal()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl"
+            >
+
+                ✕
+
+            </button>
+
+            <h2 class="text-2xl font-bold mb-6">
+
+                📩 แนะนำเพื่อน
+
+            </h2>
+
+            <div class="space-y-4">
+
+                <input
+                    id="yourName"
+                    type="text"
+                    placeholder="ชื่อผู้แนะนำ"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-4"
+                >
+
+                <input
+                    id="yourPhone"
+                    type="text"
+                    placeholder="เบอร์ผู้แนะนำ"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-4"
+                >
+
+                <input
+                    id="friendName"
+                    type="text"
+                    placeholder="ชื่อเพื่อน"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-4"
+                >
+
+                <input
+                    id="friendPhone"
+                    type="text"
+                    placeholder="เบอร์เพื่อน"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-4"
+                >
+
+                <select
+                    id="interestModel"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-4"
+                >
+
+                    <option value="G6">
+                        XPENG G6
+                    </option>
+
+                    <option value="X9">
+                        XPENG X9
+                    </option>
+
+                </select>
+
+                <textarea
+                    id="note"
+                    rows="4"
+                    placeholder="ข้อความเพิ่มเติม"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-4"
+                ></textarea>
+
+                <button
+                    onclick="submitReferral()"
+                    class="btn-cyan w-full py-4 rounded-xl"
+                >
+
+                    🚀 ส่งข้อมูล
+
+                </button>
+
+            </div>
+
+            <div
+                id="referralStatus"
+                class="text-center text-sm text-gray-400 mt-4"
+            ></div>
+
+        </div>
+
+    </div>
+
+    <!-- ========================= -->
+    <!-- SCRIPT -->
+    <!-- ========================= -->
+
+    <script>
+
+        async function doSearch(){
+
+            const query =
+            document.getElementById(
+                "searchInput"
+            ).value.trim()
+
+            const model =
+            document.getElementById(
+                "carModel"
+            ).value
+
+            const status =
+            document.getElementById(
+                "statusMsg"
+            )
+
+            const list =
+            document.getElementById(
+                "resultsList"
+            )
+
+            const area =
+            document.getElementById(
+                "resArea"
+            )
+
+            const count =
+            document.getElementById(
+                "resultCount"
+            )
+
+            if(!query){
+
+                alert("กรุณาพิมพ์คำค้นหา")
+
+                return
+            }
+
+            status.innerHTML =
+            "⏳ กำลังค้นข้อมูล..."
+
+            list.innerHTML = ""
+
+            area.classList.add("hidden")
+
+            const response =
+            await fetch("/search",{
+
+                method:"POST",
+
+                headers:{
+                    "Content-Type":"application/json"
+                },
+
+                body:JSON.stringify({
+
+                    query,
+                    model
+
+                })
+
+            })
+
+            const data =
+            await response.json()
+
+            status.innerHTML = ""
+
+            area.classList.remove("hidden")
+
+            count.innerHTML =
+            `พบ ${data.length} รายการ`
+
+            if(data.length === 0){
+
+                list.innerHTML = `
+                <div class="glass p-10 text-center text-gray-500">
+                    ไม่พบข้อมูล
+                </div>
+                `
+
+                return
+            }
+
+            data.forEach(item=>{
+
+                const card =
+                document.createElement("div")
+
+                card.className =
+                "glass p-6"
+
+                card.innerHTML = `
+
+                <div class="flex justify-between items-center mb-4">
+
+                    <div>
+
+                        <span class="bg-cyan-900/40 text-cyan-400 px-3 py-1 rounded text-xs">
+
+                            หน้า ${item.page}
+
+                        </span>
+
+                        <span class="ml-2 text-xs text-gray-500">
+
+                            ${item.model}
+
+                        </span>
+
+                    </div>
+
+                    <a
+                        href="/view/${item.model}?page=${item.page}"
+                        target="_blank"
+                        class="text-cyan-400 text-sm"
+                    >
+
+                        📄 เปิด PDF
+
+                    </a>
+
+                </div>
+
+                <div class="text-gray-300 leading-relaxed">
+
+                    ${item.text}
+
+                </div>
+
+                `
+
+                list.appendChild(card)
+
+            })
+
+        }
+
+        // =========================
+        // REFERRAL MODAL
+        // =========================
+
+        function openReferralModal(){
+
+            const modal =
+            document.getElementById(
+                "referralModal"
+            )
+
+            modal.classList.remove(
+                "hidden"
+            )
+
+            modal.classList.add(
+                "flex"
+            )
+        }
+
+        function closeReferralModal(){
+
+            const modal =
+            document.getElementById(
+                "referralModal"
+            )
+
+            modal.classList.add(
+                "hidden"
+            )
+
+            modal.classList.remove(
+                "flex"
+            )
+        }
+
+        async function submitReferral(){
+
+            const status =
+            document.getElementById(
+                "referralStatus"
+            )
+
+            const data = {
+
+                your_name:
+                document.getElementById(
+                    "yourName"
+                ).value,
+
+                your_phone:
+                document.getElementById(
+                    "yourPhone"
+                ).value,
+
+                friend_name:
+                document.getElementById(
+                    "friendName"
+                ).value,
+
+                friend_phone:
+                document.getElementById(
+                    "friendPhone"
+                ).value,
+
+                model:
+                document.getElementById(
+                    "interestModel"
+                ).value,
+
+                note:
+                document.getElementById(
+                    "note"
+                ).value
+
+            }
+
+            status.innerHTML =
+            "⏳ กำลังส่งข้อมูล..."
+
+            const response =
+            await fetch("/referral",{
+
+                method:"POST",
+
+                headers:{
+                    "Content-Type":"application/json"
+                },
+
+                body:JSON.stringify(data)
+
+            })
+
+            const result =
+            await response.json()
+
+            if(result.success){
+
+                status.innerHTML =
+                "✅ ส่งข้อมูลเรียบร้อย"
+
+            }else{
+
+                status.innerHTML =
+                "❌ เกิดข้อผิดพลาด"
+
+            }
+
+        }
+
+        document
+        .getElementById("searchInput")
+        .addEventListener("keypress",(e)=>{
+
+            if(e.key === "Enter"){
+
+                doSearch()
+
+            }
+
+        })
+
+    </script>
+
+</body>
+</html>
