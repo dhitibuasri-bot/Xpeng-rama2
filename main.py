@@ -1,13 +1,10 @@
-from flask import Flask
-from flask import request
-from flask import jsonify
-from flask import send_file
-
+```python
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 
 import fitz
 import os
-
+import json
 import gspread
 
 from oauth2client.service_account import ServiceAccountCredentials
@@ -17,13 +14,9 @@ from oauth2client.service_account import ServiceAccountCredentials
 # =========================
 
 app = Flask(
-
     __name__,
-
     static_folder='static',
-
     static_url_path='/static'
-
 )
 
 CORS(app)
@@ -33,27 +26,23 @@ CORS(app)
 # =========================
 
 scope = [
-
     "https://spreadsheets.google.com/feeds",
-
     "https://www.googleapis.com/auth/drive"
-
 ]
 
-creds = ServiceAccountCredentials.from_json_keyfile_name(
+google_creds = json.loads(
+    os.environ["GOOGLE_CREDENTIALS"]
+)
 
-    "credentials.json",
-
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    google_creds,
     scope
-
 )
 
 client = gspread.authorize(creds)
 
 sheet = client.open(
-
     "XPENG Referral"
-
 ).sheet1
 
 # =========================
@@ -61,13 +50,9 @@ sheet = client.open(
 # =========================
 
 PDFS = {
-
     "G6": "manuals/G6.pdf",
-
     "X9": "manuals/X9.pdf",
-
-    "SCREEN": "manuals/SCEEN.pdf"
-
+    "SCREEN": "manuals/SCREEN.pdf"
 }
 
 # =========================
@@ -87,9 +72,7 @@ for model, path in PDFS.items():
     print(f"📄 Loading {path}")
 
     if not os.path.exists(path):
-
         print(f"❌ File not found: {path}")
-
         continue
 
     doc = fitz.open(path)
@@ -101,13 +84,9 @@ for model, path in PDFS.items():
         text = page.get_text()
 
         pdf_data.append({
-
             "model": model,
-
             "page": page_num + 1,
-
             "text": text
-
         })
 
 print("\n✅ PDF Loaded Successfully\n")
@@ -119,11 +98,7 @@ print("\n✅ PDF Loaded Successfully\n")
 @app.route("/")
 def home():
 
-    return send_file(
-
-        "index.html"
-
-    )
+    return send_file("index.html")
 
 # =========================
 # SEARCH
@@ -134,28 +109,15 @@ def search():
 
     data = request.json
 
-    query = data.get(
+    query = data.get("query", "").lower()
 
-        "query",
-
-        ""
-
-    ).lower()
-
-    model = data.get(
-
-        "model",
-
-        ""
-
-    )
+    model = data.get("model", "")
 
     results = []
 
     for item in pdf_data:
 
         if item["model"] != model:
-
             continue
 
         if query in item["text"].lower():
@@ -163,20 +125,12 @@ def search():
             snippet = item["text"][:1200]
 
             results.append({
-
                 "model": item["model"],
-
                 "page": item["page"],
-
                 "text": snippet
-
             })
 
-    return jsonify(
-
-        results[:10]
-
-    )
+    return jsonify(results[:10])
 
 # =========================
 # VIEW PDF
@@ -185,26 +139,14 @@ def search():
 @app.route("/view/<model>")
 def view_pdf(model):
 
-    page = request.args.get(
-
-        "page",
-
-        1
-
-    )
-
     pdf_path = PDFS.get(model)
 
     if not pdf_path:
-
         return "PDF Not Found"
 
     return send_file(
-
         pdf_path,
-
         mimetype="application/pdf"
-
     )
 
 # =========================
@@ -219,35 +161,25 @@ def referral():
     try:
 
         sheet.append_row([
-
             data.get("your_name"),
-
             data.get("your_phone"),
-
             data.get("friend_name"),
-
             data.get("friend_phone"),
-
             data.get("model"),
-
             data.get("note")
-
         ])
 
         return jsonify({
-
             "success": True
-
         })
 
     except Exception as e:
 
-        print(e)
+        print("❌ ERROR:", e)
 
         return jsonify({
-
-            "success": False
-
+            "success": False,
+            "error": str(e)
         })
 
 # =========================
@@ -257,11 +189,8 @@ def referral():
 if __name__ == "__main__":
 
     app.run(
-
         host="0.0.0.0",
-
         port=5000,
-
         debug=True
-
     )
+```
