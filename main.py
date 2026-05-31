@@ -52,6 +52,7 @@ sheet = client.open(
 PDFS = {
     "G6": "manuals/G6.pdf",
     "X9": "manuals/X9.pdf",
+    "X9_2026": "manuals/X9_2026.pdf",
     "SCREEN": "manuals/SCREEN.pdf"
 }
 
