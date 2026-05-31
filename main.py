@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 
@@ -6,6 +5,7 @@ import fitz
 import os
 import json
 import gspread
+import re
 
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -81,7 +81,15 @@ for model, path in PDFS.items():
 
         page = doc.load_page(page_num)
 
-        text = page.get_text()
+        # ดึงข้อความแบบเรียงลำดับ
+        text = page.get_text("text", sort=True)
+
+        # แก้ปัญหาสระลอย / วรรณยุกต์ลอย
+        text = re.sub(
+            r'([ก-๙])\s+([่้๊๋ัิีึืุู็์ำ])',
+            r'\1\2',
+            text
+        )
 
         pdf_data.append({
             "model": model,
@@ -109,18 +117,30 @@ def search():
 
     data = request.json
 
-    query = data.get("query", "").lower()
+    query = data.get("query", "").strip()
 
     model = data.get("model", "")
 
     results = []
+
+    clean_query = re.sub(
+        r'\s+',
+        '',
+        query.lower()
+    )
 
     for item in pdf_data:
 
         if item["model"] != model:
             continue
 
-        if query in item["text"].lower():
+        clean_text = re.sub(
+            r'\s+',
+            '',
+            item["text"].lower()
+        )
+
+        if clean_query in clean_text:
 
             snippet = item["text"][:1200]
 
