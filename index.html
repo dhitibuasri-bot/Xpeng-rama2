@@ -387,57 +387,74 @@
                     return
                 }
 
-                data.forEach(item=>{
+          data.forEach(item=>{
 
-                    const card =
-                    document.createElement("div")
+    const escapedQuery =
+    query.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&'
+    )
 
-                    card.className =
-                    "glass p-6"
+    const regex =
+    new RegExp(
+        escapedQuery,
+        "gi"
+    )
 
-                    card.innerHTML = `
+    const highlightedText =
+    item.text.replace(
+        regex,
+        match =>
+        `<mark style="
+            background:#facc15;
+            color:#000;
+            padding:2px 4px;
+            border-radius:4px;
+            font-weight:bold;
+        ">${match}</mark>`
+    )
 
-                    <div class="flex justify-between items-center mb-4">
+    const card =
+    document.createElement("div")
 
-                        <div>
+    card.className =
+    "glass p-6"
 
-                            <span class="bg-cyan-900/40 text-cyan-400 px-3 py-1 rounded text-xs">
+    card.innerHTML = `
 
-                                หน้า ${item.page}
+    <div class="flex justify-between items-center mb-4">
 
-                            </span>
+        <div>
 
-                            <span class="ml-2 text-xs text-gray-500">
+            <span class="bg-cyan-900/40 text-cyan-400 px-3 py-1 rounded text-xs">
+                หน้า ${item.page}
+            </span>
 
-                                ${item.model}
+            <span class="ml-2 text-xs text-gray-500">
+                ${item.model}
+            </span>
 
-                            </span>
+        </div>
 
-                        </div>
+        <a
+            href="${API}/view/${item.model}#page=${item.page}"
+            target="_blank"
+            class="text-cyan-400 text-sm"
+        >
+            📄 เปิด PDF
+        </a>
 
-                        <a
-                            href="${API}/view/${item.model}#page=${item.page}"
-                            target="_blank"
-                            class="text-cyan-400 text-sm"
-                        >
+    </div>
 
-                            📄 เปิด PDF
+    <div class="text-gray-300 leading-relaxed whitespace-pre-line">
+        ${highlightedText}
+    </div>
 
-                        </a>
+    `
 
-                    </div>
+    list.appendChild(card)
 
-                    <div class="text-gray-300 leading-relaxed whitespace-pre-line">
-
-                        ${item.text}
-
-                    </div>
-
-                    `
-
-                    list.appendChild(card)
-
-                })
+})
 
             }catch(error){
 
