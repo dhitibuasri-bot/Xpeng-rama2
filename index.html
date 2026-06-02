@@ -374,116 +374,39 @@
                 return
             }
 
-            status.innerHTML =
-            "⏳ กำลังค้นข้อมูล..."
+            card.innerHTML = `
 
-            list.innerHTML = ""
+<div class="flex justify-between items-center mb-4">
 
-            area.classList.add("hidden")
+    <div>
 
-            try{
+        <span class="bg-cyan-900/40 text-cyan-400 px-3 py-1 rounded text-xs">
+            หน้า ${item.page}
+        </span>
 
-                const response =
-                await fetch(`${API}/search`,{
-
-                    method:"POST",
-
-                    headers:{
-                        "Content-Type":"application/json"
-                    },
-
-                    body:JSON.stringify({
-                        query,
-                        model
-                    })
-
-                })
-
-                const data =
-                await response.json()
-
-                status.innerHTML = ""
-
-                area.classList.remove("hidden")
-
-                count.innerHTML =
-                `พบ ${data.length} รายการ`
-
-                if(data.length === 0){
-
-                    list.innerHTML = `
-                    <div class="glass p-10 text-center text-gray-500">
-                        ไม่พบข้อมูล
-                    </div>
-                    `
-
-                    return
-                }
-
-          data.forEach(item=>{
-
-    const escapedQuery =
-    query.replace(
-        /[.*+?^${}()|[\]\\]/g,
-        '\\$&'
-    )
-
-    const regex =
-    new RegExp(
-        escapedQuery,
-        "gi"
-    )
-
-    const highlightedText =
-    item.text.replace(
-        regex,
-        match =>
-        `<mark style="
-            background:#facc15;
-            color:#000;
-            padding:2px 4px;
-            border-radius:4px;
-            font-weight:bold;
-        ">${match}</mark>`
-    )
-
-    const card =
-    document.createElement("div")
-
-    card.className =
-    "glass p-6"
-
-    card.innerHTML = `
-
-    <div class="flex justify-between items-center mb-4">
-
-        <div>
-
-            <span class="bg-cyan-900/40 text-cyan-400 px-3 py-1 rounded text-xs">
-                หน้า ${item.page}
-            </span>
-
-            <span class="ml-2 text-xs text-gray-500">
-                ${item.model}
-            </span>
-
-        </div>
-
-        <a
-            href="${API}/view/${item.model}#page=${item.page}"
-            target="_blank"
-            class="text-cyan-400 text-sm"
-        >
-            📄 เปิด PDF
-        </a>
+        <span class="ml-2 text-xs text-gray-500">
+            ${item.model}
+        </span>
 
     </div>
+
+    <a
+        href="${API}/view/${item.model}#page=${item.page}"
+        target="_blank"
+        class="text-cyan-400 text-sm"
+    >
+        📄 เปิด PDF
+    </a>
+
+</div>
 
 <div class="text-slate-300 leading-relaxed whitespace-pre-line">
     ${highlightedText}
 </div>
 
-    list.appendChild(card)
+`
+
+list.appendChild(card)
 
 })
 
