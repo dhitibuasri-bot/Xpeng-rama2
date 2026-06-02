@@ -86,36 +86,39 @@
 
         <header class="text-center mb-12">
 
-            <header class="text-center mb-12">
 
-```
 <div class="bg-white rounded-[32px] px-20 py-10 inline-block shadow-lg mb-5 border border-green-100">
 
     <img
         src="static/logo.png"
-        class="w-[380px] mx-auto"
+        class="w-[320px] mx-auto"
         alt="XPENG Logo"
     >
 
 </div>
 
-<h1 class="text-4xl md:text-5xl font-semibold text-slate-800">
-
+<h1
+    class="text-5xl font-bold"
+    style="
+        color:#ffffff;
+        text-shadow:
+        0 2px 8px rgba(0,0,0,.35),
+        0 0 12px rgba(126,242,154,.25);
+    "
+>
     X-tech Rama 2
-
 </h1>
+<p
+    class="text-sm font-medium tracking-[0.15em] uppercase mt-3"
+    style="color:#7EF29A;"
+>
 
-<p class="text-green-600 text-xs tracking-[0.25em] uppercase mt-2">
-
-    Service Support Assistant
+     SERVICE SUPPORT ASSISTANT
 
 </p>
-```
 
 </header>
 
-
-        </header>
 
         <!-- SEARCH -->
 
@@ -476,11 +479,9 @@
 
     </div>
 
-class="text-slate-700 leading-relaxed whitespace-pre-line"
-        ${highlightedText}
-    </div>
-
-    `
+<div class="text-slate-300 leading-relaxed whitespace-pre-line">
+    ${highlightedText}
+</div>
 
     list.appendChild(card)
 
