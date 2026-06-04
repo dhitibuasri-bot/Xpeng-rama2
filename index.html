@@ -18,21 +18,23 @@
             border: 1px solid #2D3748;
             border-radius: 24px;
         }
-        /* ⚪🟢 ปรับสไตล์ปุ่มกดใหม่: พื้นสีขาว ตัวอักษรเข้ม เงาเรืองแสงสีเขียว */
+        /* 🟢 แก้ไขปุ่มกดใหม่: เติมขอบเขียวออร่า + เพิ่มความสว่างของเงา ไม่ให้ดูซีด */
         .btn-custom{
             background: #FFFFFF;
             color: #0B0F19;
             font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(126, 242, 154, 0.2);
+            border: 1px solid #7EF29A; /* เพิ่มเส้นขอบสีเขียวออร่าตัดเฉดปุ่มให้คมชัด */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            /* เพิ่มเงาสีเขียวเรืองแสงจางๆ ไว้ตั้งแต่แรกเพื่อมิติที่ชัดเจน */
+            box-shadow: 0 0 15px rgba(126, 242, 154, 0.35);
         }
         .btn-custom:hover{
             transform: translateY(-2px);
             background: #FFFFFF;
             color: #0B0F19;
-            /* เพิ่มความสว่างของเงาสีเขียวออร่ารอบปุ่มตอนเอาเมาส์ชี้ */
-            box-shadow: 0 0 20px rgba(126, 242, 154, 0.65), 0 0 35px rgba(126, 242, 154, 0.3);
-            filter: brightness(1.05);
+            /* เร่งความสว่างของแสงนีออนสีเขียวพุ่งรอบปุ่มเมื่อเอาเมาส์ชี้ */
+            box-shadow: 0 0 25px rgba(126, 242, 154, 0.8), 0 0 45px rgba(126, 242, 154, 0.4);
+            filter: brightness(1.1);
         }
     </style>
 </head>
@@ -43,11 +45,9 @@
 
         <!-- HEADER -->
         <header class="text-center mb-12">
-            <!-- ส่วนกล่องโลโก้ใหม่ -->
             <div class="bg-slate-950/60 rounded-[32px] px-20 py-10 inline-block shadow-lg mb-5 border border-slate-800 backdrop-blur-sm">
                 <img src="static/logo.png" class="w-[320px] mx-auto" alt="XPENG Logo" style="filter: drop-shadow(0 0 15px rgba(126, 242, 154, 0.65));">
             </div>
-            <!-- 🟢 ปรับลดขนาดลงมาที่ text-4xl เพื่อความสมดุล และคงเงาสีเขียวออร่าหรูหราไว้ -->
             <h1 class="text-4xl font-extrabold tracking-widest" style="color:#ffffff; text-shadow: 0 0 15px rgba(126,242,154,0.6), 0 0 30px rgba(126,242,154,0.3), 0 2px 10px rgba(0,0,0,0.5);">
                 X-TECH RAMA 2
             </h1>
