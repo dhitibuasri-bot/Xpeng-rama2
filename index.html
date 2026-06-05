@@ -130,7 +130,6 @@
             if (model === "SCREEN") {
                 searchFields.classList.add("hidden");
                 status.innerHTML = "";
-                
                 area.classList.remove("hidden");
                 count.innerHTML = "เมนูด่วน";
                 
@@ -194,12 +193,9 @@
                 data.forEach(item => {
                     let highlightedText = item.text || "";
 
-                    // 🟢 ระบบไฮไลท์อัจฉริยะแบบแยกสระซอยย่อย (Fuzzy Match ไฮไลท์ติดแน่นอน 100%)
                     try {
                         if (query && highlightedText) {
-                            // แปลงคำค้นหาเป็นอักษรแยกเดี่ยวเพื่อจับคู่ผ่านช่องว่างที่เกิดจาก PDF ภาษาไทย
                             const chars = query.split('').map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-                            // สร้างเงื่อนไขตาม Regex ว่าให้อ่อนข้อกับช่องว่าง \s* ระหว่างอักษรแต่ละตัวได้
                             const fuzzyPattern = chars.join('\\s*');
                             const regex = new RegExp(`(${fuzzyPattern})`, "gi");
                             
@@ -213,15 +209,20 @@
                         highlightedText = item.text || "";
                     }
 
+                    // ⚡ คำนวณหน้าเป้าหมายของ PDF ชิ้นย่อย (หน้าปัจจุบัน - หน้าเริ่มต้นระบบตัดคำ + 1)
+                    const chunkStartPage = Math.max(1, item.page - 2);
+                    const targetSubPage = item.page - chunkStartPage + 1;
+
                     const card = document.createElement("div");
                     card.className = "glass p-6";
+                    // 🟢 ปรับเปลี่ยนลิงก์ปุ่มเปิด PDF ให้เรียกไปที่สวิตช์ /view_chunk/ เพื่อเปิดหน้าย่อยแบบติดสปีดพริบตาเดียว
                     card.innerHTML = `
                     <div class="flex justify-between items-center mb-4">
                         <div>
-                            <span class="bg-green-900/40 text-green-400 px-3 py-1 rounded text-xs font-semibold">หน้า ${item.page}</span>
-                            <span class="ml-2 text-xs text-gray-500">${item.model}</span>
+                            <span class="bg-green-900/40 text-green-400 px-3 py-1 rounded text-xs font-semibold">หน้าหลักเล่มที่ ${item.page}</span>
+                            <span class="ml-2 text-xs text-gray-500">${item.model} (แถมหน้าก่อน-หลัง)</span>
                         </div>
-                        <a href="${API}/view/${item.model}#page=${item.page}" target="_blank" class="text-green-400 hover:text-green-300 text-sm font-medium transition">📄 เปิด PDF</a>
+                        <a href="${API}/view_chunk/${item.model}/${item.page}#page=${targetSubPage}" target="_blank" class="text-green-400 hover:text-green-300 text-sm font-medium transition">📄 เปิดดูหน้าด่วน</a>
                     </div>
                     <div class="text-slate-300 leading-relaxed whitespace-pre-line">${highlightedText}</div>`;
                     
