@@ -153,14 +153,13 @@ def search():
 
 @app.route("/view/<model>")
 def view_pdf(model):
-    """เส้นทางเดิมสำหรับเปิดไฟล์เต็ม (ใช้กับ SCREEN เล่มสั้น)"""
     pdf_path = PDFS.get(model)
     if not pdf_path or not os.path.exists(pdf_path):
         return "PDF Manual Not Found", 404
     return send_file(pdf_path, mimetype="application/pdf")
 
 
-# ⚡ ฟังก์ชันหลัก: ตัดเฉพาะหน้าผลลัพธ์และหน้ารอบๆ (-2 และ +2 หน้า)
+# ⚡ ฟังก์ชันปรับปรุงใหม่: ตัดเฉพาะหน้ารอบตัว พร้อมสร้างหน้าปกแจ้งตำแหน่งหน้าอัตโนมัติ เพื่อป้องกันเบราเซอร์เอ๋อ
 @app.route("/view_chunk/<model>/<int:page>")
 def view_pdf_chunk(model, page):
     pdf_path = PDFS.get(model)
@@ -171,10 +170,36 @@ def view_pdf_chunk(model, page):
         src_doc = fitz.open(pdf_path)
         total_pages = len(src_doc)
         
+        # คำนวณช่วงกระดาษที่จะตัด (-2 หน้า และ +2 หน้า)
         start_page = max(1, page - 2)
         end_page = min(total_pages, page + 2)
         
         dest_doc = fitz.open()
+        
+        # 🟢 ส่วนเสริมพิเศษ: สร้างหน้าปกนำทางแบบด่วนใน Memory เพื่อระบุพิกัดให้ทีมงานรับทราบทันที
+        cover_page = dest_doc.new_page(width=595, height=842) # ขนาดมาตรฐาน A4
+        
+        # วาดกล่องข้อความแจ้งเตือนสีเขียวสไตล์ X-tech
+        rect_banner = fitz.Rect(0, 0, 595, 120)
+        shape = cover_page.new_shape()
+        shape.draw_rect(rect_banner)
+        shape.finish(fill=(0.04, 0.06, 0.10)) # สีน้ำเงินเข้มโทนเว็บหลังบ้าน
+        shape.commit()
+        
+        # พิมพ์ข้อความนำทางลงบนหน้าปก (ใช้ฟอนต์มาตรฐานเพื่อความไวในการประมวลผล)
+        cover_page.insert_text(fitz.Point(30, 50), f"X-TECH RAMA 2 - SMART PDF CLIP", fontsize=16, color=(1, 1, 1))
+        cover_page.insert_text(fitz.Point(30, 85), f"Model: XPENG {model} | Target Page: {page}", fontsize=12, color=(0.49, 0.95, 0.60))
+        
+        # พิมพ์ข้อความอธิบายขั้นตอนการเปิดอ่านเนื้อหาให้ทีมงานทราบ
+        cover_page.insert_text(fitz.Point(40, 200), f"=== Technical Manual Navigation ===", fontsize=14, color=(0, 0, 0))
+        cover_page.insert_text(fitz.Point(40, 250), f"1. Your search result is located on original Page: {page}", fontsize=12, color=(0, 0, 0))
+        cover_page.insert_text(fitz.Point(40, 290), f"2. For quick reading, this file contains only pages {start_page} to {end_page}.", fontsize=12, color=(0, 0, 0))
+        
+        # คำนวณหาตำแหน่งหน้าภายในไฟล์ย่อยใบนี้
+        target_in_subfile = page - start_page + 2 # บวก 2 เพราะมีหน้าปกเพิ่มเข้ามาเป็นหน้าแรกสุดแทน
+        cover_page.insert_text(fitz.Point(40, 350), f">> PLEASE SCROLL DOWN TO PAGE {target_in_subfile} OF THIS PDF <<", fontsize=14, color=(0.8, 0, 0))
+        
+        # เอาเนื้อหาท่อนย่อยจากเล่มหลักมาต่อท้ายหน้าปกอันนี้
         dest_doc.insert_pdf(src_doc, from_page=start_page - 1, to_page=end_page - 1)
         
         pdf_stream = io.BytesIO()
@@ -187,7 +212,7 @@ def view_pdf_chunk(model, page):
         return send_file(
             pdf_stream,
             mimetype="application/pdf",
-            download_name=f"{model}_page_{page}.pdf",
+            download_name=f"{model}_page_{page}_snippet.pdf",
             as_attachment=False
         )
         
@@ -218,7 +243,6 @@ def referral():
         return jsonify({"success": False, "error": "Database error"}), 500
 
 
-# สร้างระบบแอปคู่ขนาน เพื่อแก้บั๊ก Render เรียกหาชื่อไฟล์สลับไปสลับมา
 main = app
 
 if __name__ == "__main__":
