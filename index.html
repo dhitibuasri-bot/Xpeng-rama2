@@ -181,7 +181,6 @@
                     body:JSON.stringify({ query, model })
                 });
 
-                // ตรวจสอบความผิดพลาดจากการตอบกลับของ Server ก่อน
                 if (!response.ok) {
                     throw new Error(`Server Error (Status: ${response.status})`);
                 }
@@ -200,16 +199,21 @@
                 }
 
                 data.forEach(item => {
-                    // ป้องกันสัญลักษณ์พิเศษในคำค้นหาทำระบบพัง (Safe Regex)
-                    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    const regex = new RegExp(escapQuery, "gi");
-                    
-                    let highlightedText = item.text;
-                    if(item.text) {
-                        highlightedText = item.text.replace(
-                            regex,
-                            match => `<mark style="background:#facc15; color:#000; padding:2px 4px; border-radius:4px; font-weight:bold;">${match}</mark>`
-                        );
+                    let highlightedText = item.text || "";
+
+                    // 🛡️ ปลอดภัยขั้นสูงสุด: ครอบ Try/Catch แยกในการทำภาพไฮไลท์สีเหลือง ป้องกันอักษรไทยสระลอยแปลกๆ ทำหน้าเว็บน็อค
+                    try {
+                        const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(escapQuery, "gi");
+                        if (highlightedText) {
+                            highlightedText = highlightedText.replace(
+                                regex,
+                                match => `<mark style="background:#facc15; color:#000; padding:2px 4px; border-radius:4px; font-weight:bold;">${match}</mark>`
+                            );
+                        }
+                    } catch (regexError) {
+                        console.warn("Regex matching skipped for this item:", regexError);
+                        highlightedText = item.text || ""; // Fallback คืนค่าข้อความธรรมดา ไม่ทลายแอปพลิเคชัน
                     }
 
                     const card = document.createElement("div");
@@ -229,7 +233,7 @@
 
             }catch(error){
                 console.error("Search system crash:", error);
-                status.innerHTML = `❌ เกิดข้อผิดพลาดฝั่งแสดงผลกรุณาลองใหม่อีกครั้ง`;
+                status.innerHTML = `❌ ไม่สามารถประมวลผลข้อความหน้าเว็บได้ กรุณาลองใหม่อีกครั้ง`;
             }
         }
 
