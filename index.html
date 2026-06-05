@@ -18,21 +18,18 @@
             border: 1px solid #2D3748;
             border-radius: 24px;
         }
-        /* 🟢 แก้ไขปุ่มกดใหม่: เติมขอบเขียวออร่า + เพิ่มความสว่างของเงา ไม่ให้ดูซีด */
         .btn-custom{
             background: #FFFFFF;
             color: #0B0F19;
             font-weight: 600;
-            border: 1px solid #7EF29A; /* เพิ่มเส้นขอบสีเขียวออร่าตัดเฉดปุ่มให้คมชัด */
+            border: 1px solid #7EF29A;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            /* เพิ่มเงาสีเขียวเรืองแสงจางๆ ไว้ตั้งแต่แรกเพื่อมิติที่ชัดเจน */
             box-shadow: 0 0 15px rgba(126, 242, 154, 0.35);
         }
         .btn-custom:hover{
             transform: translateY(-2px);
             background: #FFFFFF;
             color: #0B0F19;
-            /* เร่งความสว่างของแสงนีออนสีเขียวพุ่งรอบปุ่มเมื่อเอาเมาส์ชี้ */
             box-shadow: 0 0 25px rgba(126, 242, 154, 0.8), 0 0 45px rgba(126, 242, 154, 0.4);
             filter: brightness(1.1);
         }
@@ -184,6 +181,11 @@
                     body:JSON.stringify({ query, model })
                 });
 
+                // ตรวจสอบความผิดพลาดจากการตอบกลับของ Server ก่อน
+                if (!response.ok) {
+                    throw new Error(`Server Error (Status: ${response.status})`);
+                }
+
                 const data = await response.json();
                 status.innerHTML = "";
                 area.classList.remove("hidden");
@@ -192,18 +194,23 @@
                 if(data.length === 0){
                     list.innerHTML = `
                     <div class="glass p-10 text-center text-gray-500">
-                        ไม่พบข้อมูล
+                        ไม่พบข้อมูลข้อมูลในระบบ X-tech
                     </div>`;
                     return;
                 }
 
                 data.forEach(item => {
+                    // ป้องกันสัญลักษณ์พิเศษในคำค้นหาทำระบบพัง (Safe Regex)
                     const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                     const regex = new RegExp(escapQuery, "gi");
-                    const highlightedText = item.text.replace(
-                        regex,
-                        match => `<mark style="background:#facc15; color:#000; padding:2px 4px; border-radius:4px; font-weight:bold;">${match}</mark>`
-                    );
+                    
+                    let highlightedText = item.text;
+                    if(item.text) {
+                        highlightedText = item.text.replace(
+                            regex,
+                            match => `<mark style="background:#facc15; color:#000; padding:2px 4px; border-radius:4px; font-weight:bold;">${match}</mark>`
+                        );
+                    }
 
                     const card = document.createElement("div");
                     card.className = "glass p-6";
@@ -221,8 +228,8 @@
                 });
 
             }catch(error){
-                console.log(error);
-                status.innerHTML = "❌ ไม่สามารถเชื่อมต่อระบบได้";
+                console.error("Search system crash:", error);
+                status.innerHTML = `❌ เกิดข้อผิดพลาดฝั่งแสดงผลกรุณาลองใหม่อีกครั้ง`;
             }
         }
 
