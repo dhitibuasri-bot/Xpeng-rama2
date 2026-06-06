@@ -29,11 +29,12 @@ if google_creds_raw:
 else:
     sheet = None
 
+# 🟢 ปรับลดรุ่นรถตามบรีฟ เหลือเฉพาะ G6, X9_2026 และ SCREEN (การตั้งค่าที่ใช้บ่อย)
+# 🟢 ปรับเปลี่ยนชื่อไฟล์ชี้เป้าตามโฟลเดอร์ใหม่ของน้าดิษ
 PDFS = {
     "G6": "manuals/G6.pdf",
-    "X9": "manuals/X9.pdf",
     "X9_2026": "manuals/X9_2026.pdf",
-    "SCREEN": "manuals/SCREEN.pdf"
+    "SCREEN": "manuals/frequent_settings.pdf"  # ชี้ไปที่ไฟล์ชื่อใหม่เรียบร้อยครับ
 }
 
 pdf_data = []
@@ -83,7 +84,6 @@ def search():
     except:
         return jsonify([]), 500
 
-# ⚡ ฟังก์ชันดึงไฟล์ PDF ท่อนย่อย (-2 และ +2 หน้า) ส่งให้หน้าบ้านไปส่องสปอตไลท์
 @app.route("/view_chunk/<model>/<int:page>")
 def view_pdf_chunk(model, page):
     pdf_path = PDFS.get(model)
@@ -106,11 +106,11 @@ def view_pdf_chunk(model, page):
         src_doc.close()
         dest_doc.close()
         
-        # ส่งไฟล์ PDF สะอาดขนาด 5 หน้าออกไปให้หน้าบ้านคุมแสง
         return send_file(pdf_stream, mimetype="application/pdf")
     except:
         return "Error loading snippet", 500
 
+# ⚡ ฟังก์ชันสำหรับดึงไฟล์เต็มเล่ม (ใช้สำหรับเปิดหน้าจอ SCREEN ทันที)
 @app.route("/view/<model>")
 def view_pdf(model):
     pdf_path = PDFS.get(model)
