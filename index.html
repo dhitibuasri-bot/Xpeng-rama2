@@ -250,14 +250,14 @@
             renderPdfViewer(`${API}/view/${model}`, 1, false);
         }
 
-        // 🟢 อัปเกรดตัววาดหน้ากระดาษ PDF ให้ชัดคูณสอง (HD Rendering)
+// 🟢 ชุดโค้ดอัปเกรดความคมชัดระดับสูงสุด (Dynamic Ultra HD 3x Rendering)
         async function renderPdfViewer(url, page, isChunk) {
             const modal = document.getElementById("pdfModal");
             const container = document.getElementById("pdfViewerContainer");
             document.getElementById("modalTitle").innerHTML = isChunk ? `📄 หน้าคู่มือตัดด่วน (เล่มหลักหน้าที่: ${page})` : `🛠️ คู่มือ: การตั้งค่าที่ใช้บ่อย`;
             
             modal.classList.remove("hidden");
-            container.innerHTML = `<div id="loadingPdf" class="text-center py-20 text-green-400">⏳ กำลังโหลดข้อมูลไฟล์คู่มือและระบบไฟนำทาง...</div>`;
+            container.innerHTML = `<div id="loadingPdf" class="text-center py-20 text-green-400">⏳ กำลังโหลดข้อมูลไฟล์คู่มือและระบบไฟนำทางระดับ Ultra HD...</div>`;
 
             try {
                 const loadingTask = pdfjsLib.getDocument(url);
@@ -272,12 +272,14 @@
                     const pdfPage = await pdf.getPage(i);
                     const unscaledViewport = pdfPage.getViewport({ scale: 1.0 });
                     
-                    // คำนวณเบสสเกลตามหน้าจอปกติ
+                    // คำนวณเบสสเกลหน้าจอปกติ
                     const dynamicScale = containerWidth / unscaledViewport.width;
                     const finalScale = dynamicScale > 1.3 ? 1.3 : dynamicScale;
 
-                    // ⚡ ทีเด็ดความชัด: เบิ้ลความละเอียดคูณ 2 เข้าไปที่ตัว Canvas หลังบ้าน
-                    const outputScale = 2.0; 
+                    // ⚡ ทีเด็ด: เช็คสเปกจอคนเปิดเว็บจริง ถ้าจอละเอียดจัดให้ดึงขึ้น 3 เท่า (Ultra HD) ไปเลยครับ
+                    const screenRatio = window.devicePixelRatio || 1;
+                    const outputScale = screenRatio > 2 ? 3.0 : 2.5; 
+                    
                     const viewport = pdfPage.getViewport({ scale: finalScale });
 
                     const pageWrapper = document.createElement("div");
@@ -287,11 +289,11 @@
                     const canvas = document.createElement("canvas");
                     const context = canvas.getContext("2d");
                     
-                    // บังคับจำนวนพิกเซลให้แน่นขึ้นเป็น 2 เท่า แต่อาศัย CSS บีบรูปภาพให้เท่าเดิม (ผลลัพธ์คือภาพจะชัดกริบ)
+                    // บังคับจำนวนพิกเซลให้หนาแน่นที่สุดในระดับฮาร์ดแวร์
                     canvas.width = Math.floor(viewport.width * outputScale);
                     canvas.height = Math.floor(viewport.height * outputScale);
                     
-                    // สั่งสเกลภาพวาดขึ้นตามอัตราส่วน
+                    // สั่งสเกลภาพวาดขึ้นตามอัตราส่วนความคมชัดใหม่
                     context.transform(outputScale, 0, 0, outputScale, 0, 0);
 
                     await pdfPage.render({ canvasContext: context, viewport: viewport }).promise;
@@ -328,7 +330,6 @@
             } catch (error) {
                 container.innerHTML = `<div class="text-center py-20 text-red-500">❌ ไม่สามารถโหลดไฟล์คู่มือได้</div>`;
             }
-        }
 
         async function submitReferral() {
             const your_name = document.getElementById("refYourName").value.trim();
