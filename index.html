@@ -32,13 +32,13 @@
             box-shadow: 0 0 25px rgba(126, 242, 154, 0.8);
         }
         
-        /* 🟢 ปรับปรุงตัวคลุมหน้า PDF ให้พอดีหน้าจอมือถืออัตโนมัติ */
+        /* สไตล์หน้า PDF และระบบสปอตไลท์ */
         .pdf-page-container {
             transition: all 0.4s ease;
             opacity: 0.35;
             transform: scale(0.96);
             filter: brightness(0.5);
-            width: 100%; /* บังคับกว้างเต็มพิกัดกล่อง */
+            width: 100%;
             max-w: 100%;
             box-sizing: border-box;
         }
@@ -50,7 +50,7 @@
             box-shadow: 0 0 30px rgba(126, 242, 154, 0.3);
         }
         canvas {
-            width: 100% !important; /* บังคับให้ Canvas บีบรูปภาพตามหน้าจอ */
+            width: 100% !important;
             height: auto !important;
         }
     </style>
@@ -84,12 +84,60 @@
 
         <div id="statusMsg" class="text-center text-slate-500 mb-8">ระบบพร้อมค้นหาข้อมูล X-tech</div>
 
-        <div id="resArea" class="hidden">
+        <div id="resArea" class="hidden mb-12">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-bold text-white">ผลการค้นหาคู่มือ</h2>
             </div>
             <div id="resultsList" class="space-y-4"></div>
         </div>
+
+        <div class="glass p-8 shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                🤝 <span style="color:#7EF29A;">ระบบแนะนำลูกค้า (Referral)</span>
+            </h2>
+            <p class="text-xs text-slate-400 mb-6">บันทึกข้อมูลการแนะนำเพื่อนสนใจรถยนต์ XPENG ส่งตรงเข้าตาราง Google Sheets</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">ชื่อผู้แนะนำ (ที่ปรึกษาการขาย)</label>
+                    <input type="text" id="refYourName" placeholder="ระบุชื่อของท่าน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">เบอร์โทรผู้แนะนำ</label>
+                    <input type="tel" id="refYourPhone" placeholder="ระบุเบอร์โทรของท่าน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">ชื่อเพื่อนที่แนะนำ (ลูกค้า)</label>
+                    <input type="text" id="refFriendName" placeholder="ระบุชื่อลูกค้า" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">เบอร์โทรศัพท์ลูกค้า</label>
+                    <input type="tel" id="refFriendPhone" placeholder="ระบุเบอร์โทรลูกค้า" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">รุ่นรถยนต์ที่สนใจ</label>
+                    <select id="refModel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                        <option value="G6">XPENG G6</option>
+                        <option value="X9">XPENG X9</option>
+                        <option value="X9_2026">XPENG X9 2026</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">หมายเหตุเพิ่มเติม</label>
+                    <input type="text" id="refNote" placeholder="ระบุข้อมูลเพิ่มเติม (ถ้ามี)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                </div>
+            </div>
+
+            <button onclick="submitReferral()" class="btn-custom w-full py-4 rounded-xl text-center">📤 ส่งข้อมูลแนะนำลูกค้า</button>
+            <div id="refStatus" class="text-center text-sm mt-3 font-semibold"></div>
+        </div>
+
     </div>
 
     <div id="pdfModal" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col items-center justify-center p-2 sm:p-4">
@@ -135,10 +183,8 @@
 
                 data.forEach(item => {
                     let snippetText = item.text || "";
-                    
-                    // 🟢 ดึงระเบียบบทความเนื้อหาเบื้องต้นกลับมาแสดงในการ์ดหน้าแรก
                     try {
-                        const matchIdx = snippetText.lower().indexOf(query.lower());
+                        const matchIdx = snippetText.toLowerCase().indexOf(query.toLowerCase());
                         if (matchIdx !== -1) {
                             const startIdx = Math.max(0, matchIdx - 100);
                             const endIdx = Math.min(snippetText.length, matchIdx + 200);
@@ -189,14 +235,10 @@
 
                 const startPageOrig = Math.max(1, page - 2);
                 const targetIdxInChunk = page - startPageOrig + 1;
-
-                // 🟢 หาค่าความกว้างของหน้าจอมือถือจริง ณ เวลานั้นเพื่อนำไปบีบสเกล PDF ให้พอดีจอ
                 const containerWidth = container.clientWidth - 32;
 
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const pdfPage = await pdf.getPage(i);
-                    
-                    // คำนวณ Scale อัตโนมัติแทนการระบุเลข 1.5 ตายตัว
                     const unscaledViewport = pdfPage.getViewport({ scale: 1.0 });
                     const dynamicScale = containerWidth / unscaledViewport.width;
                     const viewport = pdfPage.getViewport({ scale: dynamicScale > 1.3 ? 1.3 : dynamicScale });
@@ -247,6 +289,48 @@
 
             } catch (error) {
                 container.innerHTML = `<div class="text-center py-20 text-red-500">❌ ไม่สามารถโหลดไฟล์คู่มือได้</div>`;
+            }
+        }
+
+        // ⚡ ฟังก์ชันส่งข้อมูลเข้า Google Sheets ของแผงแนะนำเพื่อน
+        async function submitReferral() {
+            const your_name = document.getElementById("refYourName").value.trim();
+            const your_phone = document.getElementById("refYourPhone").value.trim();
+            const friend_name = document.getElementById("refFriendName").value.trim();
+            const friend_phone = document.getElementById("refFriendPhone").value.trim();
+            const model = document.getElementById("refModel").value;
+            const note = document.getElementById("refNote").value.trim();
+            const status = document.getElementById("refStatus");
+
+            if (!your_name || !your_phone || !friend_name || !friend_phone) {
+                alert("กรุณากรอกข้อมูลให้ครบถ้วนในช่องที่มีความจำเป็น");
+                return;
+            }
+
+            status.style.color = "#facc15";
+            status.innerHTML = "⏳ กำลังบันทึกข้อมูลลง Google Sheets...";
+
+            try {
+                const response = await fetch(`${API}/referral`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ your_name, your_phone, friend_name, friend_phone, model, note })
+                });
+                const resData = await response.json();
+                if (resData.success) {
+                    status.style.color = "#7EF29A";
+                    status.innerHTML = "✅ บันทึกข้อมูลสำเร็จเรียบร้อยแล้ว!";
+                    // ล้างข้อมูลในฟอร์มหลังส่งเสร็จ
+                    document.getElementById("refFriendName").value = "";
+                    document.getElementById("refFriendPhone").value = "";
+                    document.getElementById("refNote").value = "";
+                } else {
+                    status.style.color = "#ef4444";
+                    status.innerHTML = "❌ เกิดปัญหาฝั่งฐานข้อมูล กรุณาลองใหม่อีกครั้ง";
+                }
+            } catch {
+                status.style.color = "#ef4444";
+                status.innerHTML = "❌ ระบบออนไลน์ขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ต";
             }
         }
 
