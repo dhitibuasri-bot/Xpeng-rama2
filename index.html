@@ -32,19 +32,26 @@
             box-shadow: 0 0 25px rgba(126, 242, 154, 0.8);
         }
         
-        /* เอฟเฟกต์ไฟสปอตไลท์ส่องตามการเลื่อนหน้า PDF */
+        /* 🟢 ปรับปรุงตัวคลุมหน้า PDF ให้พอดีหน้าจอมือถืออัตโนมัติ */
         .pdf-page-container {
             transition: all 0.4s ease;
-            opacity: 0.35; /* หน้าที่ไม่ได้อ่าน แสงดรอป 50% */
+            opacity: 0.35;
             transform: scale(0.96);
             filter: brightness(0.5);
+            width: 100%; /* บังคับกว้างเต็มพิกัดกล่อง */
+            max-w: 100%;
+            box-sizing: border-box;
         }
         .pdf-page-container.active {
-            opacity: 1 !important; /* หน้าที่กำลังอ่าน สว่างชัด 100% */
+            opacity: 1 !important;
             transform: scale(1);
             filter: brightness(1);
             border: 2px solid #7EF29A;
             box-shadow: 0 0 30px rgba(126, 242, 154, 0.3);
+        }
+        canvas {
+            width: 100% !important; /* บังคับให้ Canvas บีบรูปภาพตามหน้าจอ */
+            height: auto !important;
         }
     </style>
 </head>
@@ -85,12 +92,12 @@
         </div>
     </div>
 
-    <div id="pdfModal" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col items-center justify-center p-4">
-        <div class="w-full max-w-4xl flex justify-between items-center mb-2 px-4">
-            <h3 id="modalTitle" class="text-lg font-bold text-white">📄 หน้าคู่มือฉบับตัดด่วน</h3>
-            <button onclick="closeModal()" class="bg-red-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-red-700 transition">✕ ปิดหน้าต่าง</button>
+    <div id="pdfModal" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col items-center justify-center p-2 sm:p-4">
+        <div class="w-full max-w-4xl flex justify-between items-center mb-2 px-2">
+            <h3 id="modalTitle" class="text-sm sm:text-lg font-bold text-white truncate max-w-[70%]">📄 หน้าคู่มือ</h3>
+            <button onclick="closeModal()" class="bg-red-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-red-700 transition text-sm">✕ ปิดหน้าต่าง</button>
         </div>
-        <div id="pdfViewerContainer" class="w-full max-w-4xl flex-grow overflow-y-auto space-y-8 p-4 bg-slate-950 rounded-2xl border border-slate-800">
+        <div id="pdfViewerContainer" class="w-full max-w-4xl flex-grow overflow-y-auto space-y-6 p-2 sm:p-4 bg-slate-950 rounded-2xl border border-slate-800">
             <div id="loadingPdf" class="text-center py-20 text-green-400">⏳ กำลังเรนเดอร์แผ่นคู่มือและระบบไฟสปอตไลท์...</div>
         </div>
     </div>
@@ -127,14 +134,37 @@
                 }
 
                 data.forEach(item => {
+                    let snippetText = item.text || "";
+                    
+                    // 🟢 ดึงระเบียบบทความเนื้อหาเบื้องต้นกลับมาแสดงในการ์ดหน้าแรก
+                    try {
+                        const matchIdx = snippetText.lower().indexOf(query.lower());
+                        if (matchIdx !== -1) {
+                            const startIdx = Math.max(0, matchIdx - 100);
+                            const endIdx = Math.min(snippetText.length, matchIdx + 200);
+                            snippetText = snippetText.substring(startIdx, endIdx);
+                            if (startIdx > 0) snippetText = "..." + snippetText;
+                            if (endIdx < item.text.length) snippetText = snippetText + "...";
+                        } else {
+                            snippetText = snippetText.substring(0, 200) + "...";
+                        }
+
+                        const chars = query.split('').map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+                        const fuzzyPattern = chars.join('\\s*');
+                        const regex = new RegExp(`(${fuzzyPattern})`, "gi");
+                        snippetText = snippetText.replace(regex, match => `<mark style="background:#facc15; color:#000; padding:2px 4px; border-radius:4px; font-weight:bold;">${match}</mark>`);
+                    } catch (e) {
+                        snippetText = (item.text || "").substring(0, 200) + "...";
+                    }
+
                     const card = document.createElement("div");
-                    card.className = "glass p-6 flex justify-between items-center shadow-lg border border-slate-800";
+                    card.className = "glass p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg border border-slate-800";
                     card.innerHTML = `
-                        <div>
-                            <div class="text-sm text-green-400 font-semibold mb-1">📄 พบในคู่มือ หน้าที่ ${item.page}</div>
-                            <div class="text-xs text-slate-500 uppercase">${item.model}</div>
+                        <div class="flex-grow">
+                            <div class="text-sm text-green-400 font-semibold mb-2">📄 พบในคู่มือ หน้าที่ ${item.page} (${item.model})</div>
+                            <div class="text-slate-300 text-sm leading-relaxed whitespace-pre-line bg-slate-900/40 p-3 rounded-xl border border-slate-800/60">${snippetText}</div>
                         </div>
-                        <button onclick="openPdfSpotlight('${item.model}', ${item.page})" class="btn-custom px-6 py-2 rounded-xl text-sm">📄 เปิดดูหน้าด่วน</button>
+                        <button onclick="openPdfSpotlight('${item.model}', ${item.page})" class="btn-custom w-full md:w-auto px-6 py-3 rounded-xl text-sm whitespace-nowrap self-stretch md:self-auto text-center">📄 เปิดดูหน้าด่วน</button>
                     `;
                     list.appendChild(card);
                 });
@@ -143,11 +173,10 @@
             }
         }
 
-        // ⚡ ฟังก์ชันโหลด PDF และติดตั้งไฟสปอตไลท์ส่องตามการเลื่อน
         async function openPdfSpotlight(model, page) {
             const modal = document.getElementById("pdfModal");
             const container = document.getElementById("pdfViewerContainer");
-            document.getElementById("modalTitle").innerHTML = `📄 คู่มือเป้าหมาย: XPENG ${model} (หน้าต้นฉบับ: ${page})`;
+            document.getElementById("modalTitle").innerHTML = `📄 คู่มือ: XPENG ${model} (หน้าเล่มจริง: ${page})`;
             
             modal.classList.remove("hidden");
             container.innerHTML = `<div id="loadingPdf" class="text-center py-20 text-green-400">⏳ กำลังสร้างหน้าคู่มือและระบบไฟสปอตไลท์...</div>`;
@@ -156,20 +185,23 @@
                 const pdfUrl = `${API}/view_chunk/${model}/${page}`;
                 const loadingTask = pdfjsLib.getDocument(pdfUrl);
                 const pdf = await loadingTask.promise;
-                container.innerHTML = ""; // ล้างหน้า Loading
+                container.innerHTML = "";
 
-                // คำนวณหาว่าหน้าเป้าหมายจริง อยู่ที่หน้าไหนในไฟล์ย่อย 5 หน้านี้
-                // หน้าแรกของไฟล์ย่อยคือ max(1, page - 2)
                 const startPageOrig = Math.max(1, page - 2);
-                const targetIdxInChunk = page - startPageOrig + 1; // ลำดับหน้าในไฟล์ย่อย (1-5)
+                const targetIdxInChunk = page - startPageOrig + 1;
+
+                // 🟢 หาค่าความกว้างของหน้าจอมือถือจริง ณ เวลานั้นเพื่อนำไปบีบสเกล PDF ให้พอดีจอ
+                const containerWidth = container.clientWidth - 32;
 
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const pdfPage = await pdf.getPage(i);
-                    const viewport = pdfPage.getViewport({ scale: 1.5 });
+                    
+                    // คำนวณ Scale อัตโนมัติแทนการระบุเลข 1.5 ตายตัว
+                    const unscaledViewport = pdfPage.getViewport({ scale: 1.0 });
+                    const dynamicScale = containerWidth / unscaledViewport.width;
+                    const viewport = pdfPage.getViewport({ scale: dynamicScale > 1.3 ? 1.3 : dynamicScale });
 
-                    // สร้างกล่องครอบแต่ละหน้ากระดาษ
                     const pageWrapper = document.createElement("div");
-                    // ถ้าเป็นหน้าเป้าหมายหลัก ให้สว่างทันทีตั้งแต่เปิดมา
                     pageWrapper.className = `pdf-page-container mx-auto flex flex-col items-center p-2 bg-white rounded-lg shadow-xl ${i === targetIdxInChunk ? 'active' : ''}`;
                     pageWrapper.setAttribute("data-page-index", i);
 
@@ -180,7 +212,6 @@
 
                     await pdfPage.render({ canvasContext: context, viewport: viewport }).promise;
                     
-                    // ป้ายบอกเลขหน้ากำกับท้ายหน้ากระดาษ
                     const pageLabel = document.createElement("div");
                     pageLabel.className = "text-center text-xs font-bold text-slate-800 mt-2";
                     pageLabel.innerHTML = `หน้าคู่มือเล่มจริงที่: ${startPageOrig + i - 1}`;
@@ -189,7 +220,6 @@
                     pageWrapper.appendChild(pageLabel);
                     container.appendChild(pageWrapper);
 
-                    // ถ้าเป็นหน้าเป้าหมาย สั่งเลื่อนหน้าจอมาโฟกัสหน้านี้ทันทีตอนเปิด
                     if (i === targetIdxInChunk) {
                         setTimeout(() => {
                             pageWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -197,19 +227,18 @@
                     }
                 }
 
-                // 🟢 ติดตั้งระบบตรวจจับสายตา (Spotlight Observer Tracker)
                 const pages = document.querySelectorAll('.pdf-page-container');
                 const observerOptions = {
                     root: container,
                     rootMargin: '-30% 0px -30% 0px',
-                    threshold: 0.5
+                    threshold: 0.4
                 };
 
                 const observer = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
                         if (entry.isIntersecting) {
                             pages.forEach(p => p.classList.remove('active'));
-                            entry.target.classList.add('active'); // ส่องไฟหน้าปัจจุบันให้สว่าง 100% หน้าอื่นดรอปมืดทันที
+                            entry.target.classList.add('active');
                         }
                     });
                 }, observerOptions);
@@ -222,7 +251,7 @@
         }
 
         function closeModal() {
-            document.getElementById("pdfModal").classSub = document.getElementById("pdfModal").classList.add("hidden");
+            document.getElementById("pdfModal").classList.add("hidden");
         }
     </script>
 </body>
