@@ -31,6 +31,7 @@
             transform: translateY(-2px);
             box-shadow: 0 0 25px rgba(126, 242, 154, 0.8);
         }
+        
         .pdf-page-container {
             transition: all 0.4s ease;
             opacity: 0.35;
@@ -57,7 +58,6 @@
 <body class="min-h-screen py-12">
     <div class="max-w-5xl mx-auto px-6">
 
-        <!-- HEADER -->
         <header class="text-center mb-12">
             <div class="bg-slate-950/60 rounded-[32px] px-20 py-10 inline-block shadow-lg mb-5 border border-slate-800">
                 <img src="static/logo.png" class="w-[320px] mx-auto" alt="XPENG Logo" style="filter: drop-shadow(0 0 15px rgba(126, 242, 154, 0.65));">
@@ -66,23 +66,19 @@
             <p class="text-sm font-medium tracking-[0.15em] mt-3" style="color:#7EF29A;">SERVICE SUPPORT ASSISTANT</p>
         </header>
 
-        <!-- SEARCH CONTAINER -->
         <div class="glass p-8 shadow-2xl mb-10">
             <div class="flex flex-col md:flex-row gap-4">
-                <!-- 🟢 เปลี่ยนชื่อรุ่นรถตามบรีฟเด็ดขาดของน้าดิษ -->
                 <select id="carModel" onchange="handleModelChange()" class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-4 text-white md:w-1/3 focus:outline-none">
                     <option value="G6">XPENG G6</option>
                     <option value="X9_2026">XPENG X9 2026</option>
                     <option value="SCREEN">🛠️ การตั้งค่าที่ใช้บ่อย</option>
                 </select>
                 
-                <!-- ส่วนกล่องค้นหาแบบปกติ -->
                 <div id="searchFields" class="flex flex-col md:flex-row gap-4 flex-grow">
                     <input type="text" id="searchInput" placeholder="ค้นหาคู่มือเทคนิค..." class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-6 py-4 text-white focus:outline-none">
                     <button onclick="doSearch()" class="btn-custom px-10 py-4 rounded-xl">🔍 ค้นหา</button>
                 </div>
 
-                <!-- 🟢 ปุ่มเปิดทางด่วนพิเศษ จะโผล่มาเฉพาะตอนเลือก "การตั้งค่าที่ใช้บ่อย" -->
                 <div id="directOpenFields" class="hidden flex-grow">
                     <button onclick="openFullPdfDirect('SCREEN')" class="btn-custom w-full py-4 rounded-xl text-center text-lg flex items-center justify-center gap-2" style="background:#7EF29A; color:#0B0F19;">
                         📖 เปิดดูคู่มือการตั้งค่าด่วนทันที
@@ -93,7 +89,6 @@
 
         <div id="statusMsg" class="text-center text-slate-500 mb-8">ระบบพร้อมค้นหาข้อมูล X-tech</div>
 
-        <!-- RESULTS AREA -->
         <div id="resArea" class="hidden mb-12">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-bold text-white">ผลการค้นหาคู่มือ</h2>
@@ -101,7 +96,6 @@
             <div id="resultsList" class="space-y-4"></div>
         </div>
 
-        <!-- แผงระบบแนะนำเพื่อน (MGM) -->
         <div class="glass p-8 shadow-2xl">
             <h2 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
                 🤝 <span style="color:#7EF29A;">ระบบแนะนำลูกค้า (MGM Referral)</span>
@@ -150,7 +144,6 @@
 
     </div>
 
-    <!-- POPUP MODAL สำหรับฉาย PDF -->
     <div id="pdfModal" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col items-center justify-center p-2 sm:p-4">
         <div class="w-full max-w-4xl flex justify-between items-center mb-2 px-2">
             <h3 id="modalTitle" class="text-sm sm:text-lg font-bold text-white truncate max-w-[70%]">📄 หน้าคู่มือ</h3>
@@ -165,7 +158,6 @@
         pdfjsLib.GlobalWorkerOptions.workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         const API = "https://xpeng-rama2.onrender.com";
 
-        // 🟢 ฟังก์ชันคุมหน้าจอด่วน ซ่อนช่องพิมพ์ค้นหาทันทีเมื่อเปลี่ยนเป็นเมนูตั้งค่าใช้บ่อย
         function handleModelChange() {
             const model = document.getElementById("carModel").value;
             const searchFields = document.getElementById("searchFields");
@@ -250,17 +242,15 @@
             }
         }
 
-        // ฟังก์ชันโหลดแบบแบ่งท่อน PDF ปกติ
         async function openPdfSpotlight(model, page) {
             renderPdfViewer(`${API}/view_chunk/${model}/${page}`, page, true);
         }
 
-        // 🟢 ฟังก์ชันพิเศษเปิดไฟล์เต็มทันที (ใช้สำหรับปุ่มการตั้งค่าที่ใช้บ่อย)
         async function openFullPdfDirect(model) {
             renderPdfViewer(`${API}/view/${model}`, 1, false);
         }
 
-        // แกนหลักในการวาดแผ่นคู่มือ PDF ลงใน Popup
+        // 🟢 อัปเกรดตัววาดหน้ากระดาษ PDF ให้ชัดคูณสอง (HD Rendering)
         async function renderPdfViewer(url, page, isChunk) {
             const modal = document.getElementById("pdfModal");
             const container = document.getElementById("pdfViewerContainer");
@@ -281,18 +271,28 @@
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const pdfPage = await pdf.getPage(i);
                     const unscaledViewport = pdfPage.getViewport({ scale: 1.0 });
+                    
+                    // คำนวณเบสสเกลตามหน้าจอปกติ
                     const dynamicScale = containerWidth / unscaledViewport.width;
-                    const viewport = pdfPage.getViewport({ scale: dynamicScale > 1.3 ? 1.3 : dynamicScale });
+                    const finalScale = dynamicScale > 1.3 ? 1.3 : dynamicScale;
+
+                    // ⚡ ทีเด็ดความชัด: เบิ้ลความละเอียดคูณ 2 เข้าไปที่ตัว Canvas หลังบ้าน
+                    const outputScale = 2.0; 
+                    const viewport = pdfPage.getViewport({ scale: finalScale });
 
                     const pageWrapper = document.createElement("div");
-                    // หากเปิดแบบเล่มเต็มให้สว่างครบทุกหน้า หากเปิดแบบท่อนย่อยให้จุดประกายเฉพาะหน้าเป้าหมายก่อน
                     pageWrapper.className = `pdf-page-container mx-auto flex flex-col items-center p-2 bg-white rounded-lg shadow-xl ${(!isChunk || i === targetIdxInChunk) ? 'active' : ''}`;
                     pageWrapper.setAttribute("data-page-index", i);
 
                     const canvas = document.createElement("canvas");
                     const context = canvas.getContext("2d");
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
+                    
+                    // บังคับจำนวนพิกเซลให้แน่นขึ้นเป็น 2 เท่า แต่อาศัย CSS บีบรูปภาพให้เท่าเดิม (ผลลัพธ์คือภาพจะชัดกริบ)
+                    canvas.width = Math.floor(viewport.width * outputScale);
+                    canvas.height = Math.floor(viewport.height * outputScale);
+                    
+                    // สั่งสเกลภาพวาดขึ้นตามอัตราส่วน
+                    context.transform(outputScale, 0, 0, outputScale, 0, 0);
 
                     await pdfPage.render({ canvasContext: context, viewport: viewport }).promise;
                     
@@ -311,7 +311,6 @@
                     }
                 }
 
-                // ส่องไฟสปอตไลท์วิ่งตามสกรอลล์มือ (เปิดใช้เฉพาะในโหมดท่อนย่อยค้นหา)
                 if (isChunk) {
                     const pages = document.querySelectorAll('.pdf-page-container');
                     const observerOptions = { root: container, rootMargin: '-30% 0px -30% 0px', threshold: 0.4 };
