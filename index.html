@@ -93,35 +93,35 @@
 
         <div class="glass p-8 shadow-2xl">
             <h2 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                🤝 <span style="color:#7EF29A;">ระบบแนะนำลูกค้า (Referral)</span>
+                🤝 <span style="color:#7EF29A;">ระบบแนะนำลูกค้า (MGM Referral)</span>
             </h2>
-            <p class="text-xs text-slate-400 mb-6">บันทึกข้อมูลการแนะนำเพื่อนสนใจรถยนต์ XPENG ส่งตรงเข้าตาราง Google Sheets</p>
+            <p class="text-xs text-slate-400 mb-6">สำหรับลูกค้าที่ออกรถไปแล้ว แนะนำเพื่อนหรือคนรู้จักที่สนใจรถยนต์ XPENG (ข้อมูลจะถูกบันทึกส่งตรงเข้าตารางบริษัท)</p>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                    <label class="block text-xs text-slate-400 mb-2">ชื่อผู้แนะนำ (ที่ปรึกษาการขาย)</label>
-                    <input type="text" id="refYourName" placeholder="ระบุชื่อของท่าน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                    <label class="block text-xs text-slate-400 mb-2">ชื่อ-นามสกุล ของท่าน (ผู้แนะนำ/ลูกค้าเก่า)</label>
+                    <input type="text" id="refYourName" placeholder="ระบุชื่อ-นามสกุลของท่าน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-2">เบอร์โทรผู้แนะนำ</label>
-                    <input type="tel" id="refYourPhone" placeholder="ระบุเบอร์โทรของท่าน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                    <label class="block text-xs text-slate-400 mb-2">เบอร์โทรศัพท์ของท่าน</label>
+                    <input type="tel" id="refYourPhone" placeholder="ระบุเบอร์โทรศัพท์ของท่าน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                    <label class="block text-xs text-slate-400 mb-2">ชื่อเพื่อนที่แนะนำ (ลูกค้า)</label>
-                    <input type="text" id="refFriendName" placeholder="ระบุชื่อลูกค้า" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                    <label class="block text-xs text-slate-400 mb-2">ชื่อ-นามสกุล ของเพื่อนที่ท่านแนะนำ (ลูกค้าใหม่)</label>
+                    <input type="text" id="refFriendName" placeholder="ระบุชื่อ-นามสกุลของเพื่อน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-2">เบอร์โทรศัพท์ลูกค้า</label>
-                    <input type="tel" id="refFriendPhone" placeholder="ระบุเบอร์โทรลูกค้า" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                    <label class="block text-xs text-slate-400 mb-2">เบอร์โทรศัพท์ของเพื่อนที่ท่านแนะนำ</label>
+                    <input type="tel" id="refFriendPhone" placeholder="ระบุเบอร์โทรศัพท์ของเพื่อน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
-                    <label class="block text-xs text-slate-400 mb-2">รุ่นรถยนต์ที่สนใจ</label>
+                    <label class="block text-xs text-slate-400 mb-2">รุ่นรถยนต์ที่เพื่อนของท่านสนใจ</label>
                     <select id="refModel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
                         <option value="G6">XPENG G6</option>
                         <option value="X9">XPENG X9</option>
@@ -129,12 +129,12 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-2">หมายเหตุเพิ่มเติม</label>
+                    <label class="block text-xs text-slate-400 mb-2">ข้อมูลหรือหมายเหตุเพิ่มเติม</label>
                     <input type="text" id="refNote" placeholder="ระบุข้อมูลเพิ่มเติม (ถ้ามี)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
                 </div>
             </div>
 
-            <button onclick="submitReferral()" class="btn-custom w-full py-4 rounded-xl text-center">📤 ส่งข้อมูลแนะนำลูกค้า</button>
+            <button onclick="submitReferral()" class="btn-custom w-full py-4 rounded-xl text-center">📤 ส่งข้อมูลแนะนำเพื่อน</button>
             <div id="refStatus" class="text-center text-sm mt-3 font-semibold"></div>
         </div>
 
@@ -292,7 +292,6 @@
             }
         }
 
-        // ⚡ ฟังก์ชันส่งข้อมูลเข้า Google Sheets ของแผงแนะนำเพื่อน
         async function submitReferral() {
             const your_name = document.getElementById("refYourName").value.trim();
             const your_phone = document.getElementById("refYourPhone").value.trim();
@@ -308,7 +307,7 @@
             }
 
             status.style.color = "#facc15";
-            status.innerHTML = "⏳ กำลังบันทึกข้อมูลลง Google Sheets...";
+            status.innerHTML = "⏳ กำลังบันทึกข้อมูลลง Google Sheets... ";
 
             try {
                 const response = await fetch(`${API}/referral`, {
@@ -319,8 +318,7 @@
                 const resData = await response.json();
                 if (resData.success) {
                     status.style.color = "#7EF29A";
-                    status.innerHTML = "✅ บันทึกข้อมูลสำเร็จเรียบร้อยแล้ว!";
-                    // ล้างข้อมูลในฟอร์มหลังส่งเสร็จ
+                    status.innerHTML = "✅ บันทึกข้อมูลการแนะนำเพื่อนสำเร็จเรียบร้อยแล้ว ขอบพระคุณที่ไว้วางใจ XPENG Rama 2 ครับ!";
                     document.getElementById("refFriendName").value = "";
                     document.getElementById("refFriendPhone").value = "";
                     document.getElementById("refNote").value = "";
