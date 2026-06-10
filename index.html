@@ -230,13 +230,11 @@
                         snippetText = (item.text || "").substring(0, 200) + "...";
                     }
 
-                    // ใช้สีป้ายติด Card ต่างกันเพื่อให้ทีมขายแยกแยะง่ายผ่านจอมือถือ (G6=ฟ้า, X9=ม่วง)
                     const badgeColor = item.model === "G6" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "bg-purple-500/20 text-purple-400 border border-purple-500/30";
 
                     const card = document.createElement("div");
                     card.className = "glass p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg border border-slate-800";
                     
-                    // 🟢 นำคำว่า "ในเล่มจริงหน้าที่" ออกอย่างสมบูรณ์แบบตามสั่งเรียบร้อยครับ เหลือแค่ "หน้าที่ ${item.page}"
                     card.innerHTML = `
                         <div class="flex-grow w-full">
                             <div class="flex items-center gap-2 mb-2">
@@ -244,8 +242,7 @@
                                 <div class="text-xs text-green-400 font-semibold">📄 หน้าที่ ${item.page}</div>
                             </div>
                             <div class="relative text-slate-300 text-sm leading-relaxed whitespace-pre-line bg-slate-900/40 p-3 rounded-xl border border-slate-800/60">
-                                <div id="text-limit-${index}" class="line-clamp-3">${snippetText}</div>
-                                <button onclick="toggleReadMore(${index})" id="btn-limit-${index}" class="text-xs text-yellow-400 font-medium mt-2 underline block">📖 อ่านเนื้อหาเต็มหน้า</button>
+                                <div>${snippetText}</div>
                             </div>
                         </div>
                         <button onclick="openPdfSpotlight('${item.model}', ${item.page})" class="btn-custom w-full md:w-auto px-6 py-3 rounded-xl text-sm whitespace-nowrap self-stretch md:self-auto text-center">📄 เปิดดูหน้าด่วน</button>
@@ -254,18 +251,6 @@
                 });
             }catch{
                 status.innerHTML = `❌ เกิดข้อผิดพลาด`;
-            }
-        }
-
-        function toggleReadMore(index) {
-            const textZone = document.getElementById(`text-limit-${index}`);
-            const btn = document.getElementById(`btn-limit-${index}`);
-            if (textZone.classList.contains("line-clamp-3")) {
-                textZone.classList.remove("line-clamp-3");
-                btn.innerHTML = "❌ ยุบข้อความลง";
-            } else {
-                textZone.classList.add("line-clamp-3");
-                btn.innerHTML = "📖 อ่านเนื้อหาเต็มหน้า";
             }
         }
 
@@ -394,6 +379,15 @@
                 status.innerHTML = "❌ ระบบออนไลน์ขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ต";
             }
         }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const searchInput = document.getElementById("searchInput");
+            if(searchInput) {
+                searchInput.addEventListener("keypress", (e) => {
+                    if (e.key === "Enter") { doSearch(); }
+                });
+            }
+        });
 
         function closeModal() {
             document.getElementById("pdfModal").classList.add("hidden");
