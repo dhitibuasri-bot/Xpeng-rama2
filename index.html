@@ -37,7 +37,7 @@
             transform: scale(0.96);
             filter: brightness(0.5);
             width: 100%;
-            max-w: 100%;
+            max-width: 100%;
             box-sizing: border-box;
         }
         .pdf-page-container.active {
@@ -208,7 +208,7 @@
                     return;
                 }
 
-                data.forEach(item => {
+                data.forEach((item, index) => {
                     let snippetText = item.text || "";
                     try {
                         const matchIdx = snippetText.toLowerCase().indexOf(query.toLowerCase());
@@ -219,7 +219,7 @@
                             if (startIdx > 0) snippetText = "..." + snippetText;
                             if (endIdx < item.text.length) snippetText = snippetText + "...";
                         } else {
-                            snippetText = snippetText.substring(0, 200) + "...";
+                            snippetText = snippetText.substring(0, 300) + "...";
                         }
 
                         const chars = query.split('').map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -230,12 +230,23 @@
                         snippetText = (item.text || "").substring(0, 200) + "...";
                     }
 
+                    // ใช้สีป้ายติด Card ต่างกันเพื่อให้ทีมขายแยกแยะง่ายผ่านจอมือถือ (G6=ฟ้า, X9=ม่วง)
+                    const badgeColor = item.model === "G6" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "bg-purple-500/20 text-purple-400 border border-purple-500/30";
+
                     const card = document.createElement("div");
-                    card.className = "glass p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg border border-slate-800";
+                    card.className = "glass p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg border border-slate-800";
+                    
+                    // 🟢 นำคำว่า "ในเล่มจริงหน้าที่" ออกอย่างสมบูรณ์แบบตามสั่งเรียบร้อยครับ เหลือแค่ "หน้าที่ ${item.page}"
                     card.innerHTML = `
-                        <div class="flex-grow">
-                            <div class="text-sm text-green-400 font-semibold mb-2">📄 พบในคู่มือ หน้าที่ ${item.page} (${item.model})</div>
-                            <div class="text-slate-300 text-sm leading-relaxed whitespace-pre-line bg-slate-900/40 p-3 rounded-xl border border-slate-800/60">${snippetText}</div>
+                        <div class="flex-grow w-full">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-xs px-2.5 py-1 rounded-md font-bold ${badgeColor}">XPENG ${item.model}</span>
+                                <div class="text-xs text-green-400 font-semibold">📄 หน้าที่ ${item.page}</div>
+                            </div>
+                            <div class="relative text-slate-300 text-sm leading-relaxed whitespace-pre-line bg-slate-900/40 p-3 rounded-xl border border-slate-800/60">
+                                <div id="text-limit-${index}" class="line-clamp-3">${snippetText}</div>
+                                <button onclick="toggleReadMore(${index})" id="btn-limit-${index}" class="text-xs text-yellow-400 font-medium mt-2 underline block">📖 อ่านเนื้อหาเต็มหน้า</button>
+                            </div>
                         </div>
                         <button onclick="openPdfSpotlight('${item.model}', ${item.page})" class="btn-custom w-full md:w-auto px-6 py-3 rounded-xl text-sm whitespace-nowrap self-stretch md:self-auto text-center">📄 เปิดดูหน้าด่วน</button>
                     `;
@@ -243,6 +254,18 @@
                 });
             }catch{
                 status.innerHTML = `❌ เกิดข้อผิดพลาด`;
+            }
+        }
+
+        function toggleReadMore(index) {
+            const textZone = document.getElementById(`text-limit-${index}`);
+            const btn = document.getElementById(`btn-limit-${index}`);
+            if (textZone.classList.contains("line-clamp-3")) {
+                textZone.classList.remove("line-clamp-3");
+                btn.innerHTML = "❌ ยุบข้อความลง";
+            } else {
+                textZone.classList.add("line-clamp-3");
+                btn.innerHTML = "📖 อ่านเนื้อหาเต็มหน้า";
             }
         }
 
@@ -346,7 +369,7 @@
             }
 
             status.style.color = "#facc15";
-            status.innerHTML = "⏳ กำลังบันทึกข้อมูลลง Google Sheets... ";
+            status.innerHTML = "⏳ กำลังบันทึกข้อมูลและวิเคราะห์เบอร์โทรศัพท์... ";
 
             try {
                 const response = await fetch(`${API}/referral`, {
@@ -354,8 +377,9 @@
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ your_name, your_phone, friend_name, friend_phone, model, note })
                 });
+                
                 const resData = await response.json();
-                if (resData.success) {
+                if (response.ok && resData.success) {
                     status.style.color = "#7EF29A";
                     status.innerHTML = "✅ บันทึกข้อมูลการแนะนำเพื่อนสำเร็จเรียบร้อยแล้ว ขอบพระคุณที่ไว้วางใจ XPENG Rama 2 ครับ!";
                     document.getElementById("refFriendName").value = "";
@@ -363,7 +387,7 @@
                     document.getElementById("refNote").value = "";
                 } else {
                     status.style.color = "#ef4444";
-                    status.innerHTML = "❌ เกิดปัญหาฝั่งฐานข้อมูล กรุณาลองใหม่อีกครั้ง";
+                    status.innerHTML = `❌ ${resData.message || "เกิดปัญหาฝั่งฐานข้อมูล กรุณาลองใหม่อีกครั้ง"}`;
                 }
             } catch {
                 status.style.color = "#ef4444";
