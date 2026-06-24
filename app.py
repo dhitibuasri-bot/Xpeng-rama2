@@ -7,19 +7,30 @@ import json
 import gspread
 import re
 import io
-from datetime import datetime  # 🟢 ข้อ 5: สำหรับบันทึกวันเวลา
-from pythainlp.tokenize import word_tokenize  # 🟢 ข้อ 1: คลังตัดคำภาษาไทยสำหรับทำ Fuzzy Search
 
 from oauth2client.service_account import ServiceAccountCredentials
 
-app = Flask(__name__, static_folder='static', static_url_path='/static')
-# ล็อกให้เฉพาะเว็บของน้าดิษเท่านั้นที่ดึงข้อมูลได้
-CORS(app, origins=["https://dhitibuasri-bot.github.io"])
+# =========================
+# APP CONFIGURATION
+# =========================
+
+app = Flask(
+    __name__,
+    static_folder='static',
+    static_url_path='/static'
+)
+
+CORS(app)
 
 # =========================
 # GOOGLE SHEET CONFIGURATION
 # =========================
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+scope = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive"
+]
+
 google_creds_raw = os.environ.get("GOOGLE_CREDENTIALS")
 if google_creds_raw:
     try:
@@ -27,131 +38,73 @@ if google_creds_raw:
         creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
         client = gspread.authorize(creds)
         sheet = client.open("XPENG Referral").sheet1
-    except:
+        print("✅ Google Sheets Connected Successfully")
+    except Exception as e:
+        print(f"❌ Google Sheets Connection Error: {e}")
         sheet = None
 else:
+    print("⚠️ WARNING: GOOGLE_CREDENTIALS environment variable is not set!")
     sheet = None
 
-# รายชื่อไฟล์คู่มือเทคนิค
+# =========================
+# PDF PATHS
+# =========================
+
 PDFS = {
     "G6": "manuals/G6.pdf",
+    "X9": "manuals/X9.pdf",
     "X9_2026": "manuals/X9_2026.pdf",
-    "SCREEN": "manuals/frequent_settings.pdf"
+    "SCREEN": "manuals/SCREEN.pdf"
 }
 
-# 🟢 ข้อ 1: คลังคำศัพท์เทคนิคภาษาไทย 50 คำที่ใช้งานบ่อยหน้างาน (อัปเดตชุดใหญ่)
-SYNONYMS = {
-    # 🚗 หมวดระบบขับเคลื่อน / แบตเตอรี่ / การชาร์จ
-    "เบรค": "เบรก",
-    "แอร์": "ระบบปรับอากาศ",
-    "ชาร์จ": "ประจุไฟ",
-    "แบต": "แบตเตอรี่",
-    "แบตเตอรรี่": "แบตเตอรี่",
-    "เต้ารับ": "พอร์ตชาร์จ",
-    "ตู้ชาร์จ": "สถานีชาร์จ",
-    "ไฟกระแสสลับ": "ac",
-    "ไฟกระแสตรง": "dc",
-    "โหมดประหยัด": "eco",
-    "ขับคนเดียว": "โหมดขับเคลื่อนด้วยมอเตอร์เดี่ยว",
-    "วันเพดดอล": "one-pedal",
-    "สลับแบต": "v2l",
-    
-    # 📱 หมวดหน้าจอ / ระบบความบันเทิง / การเชื่อมต่อ
-    "หน้าจอ": "จอแสดงผล",
-    "จอกลาง": "จอควบคุมส่วนกลาง",
-    "จอหลัง": "จอแสดงผลอเนกประสงค์ด้านหลัง",
-    "ไวไฟ": "wifi",
-    "บลูทูธ": "bluetooth",
-    "บลูทูช": "bluetooth",
-    "ต่อมือถือ": "การเชื่อมต่อโทรศัพท์",
-    "เน็ต": "อินเทอร์เน็ต",
-    "จอนำทาง": "ระบบนำทาง",
-    "แผนที่": "ระบบนำทาง導航",
-    "คีย์": "กุญแจ",
-    "กุญแจมือถือ": "กุญแจดิจิทัล",
-    "แอป": "แอปพลิเคชัน",
-    
-    # 💺 หมวดห้องโดยสาร / เบาะนั่ง / ความสะดวกสบาย
-    "เบาะ": "เบาะนั่ง",
-    "เบาะนวด": "ระบบนวดเบาะนั่ง",
-    "เบาะร้อน": "ระบบทำความร้อนเบาะนั่ง",
-    "เบาะเย็น": "ระบบระบายอากาศเบาะนั่ง",
-    "พวงมาลัย": "พวงมาลัยมัลติฟังก์ชัน",
-    "ซันรูฟ": "หลังคากระจกพาโนรามา",
-    "ที่ชาร์จไร้สาย": "การชาร์จแบบไร้สายของโทรศัพท์",
-    "ตู้เย็น": "กล่องทำความเย็นอัจฉริยะ",
-    "แผ่นกั้น": "แผ่นปิดห้องสัมภาระท้าย",
-    
-    # 🛡️ หมวดระบบความปลอดภัย / ADAS / กล้อง / เซนเซอร์
-    "กล้อง": "กล้องมองภาพรอบทิศทาง",
-    "กล้อง360": "ภาพพาโนรามา 360",
-    "ถุงลม": "ถุงลมนิรภัย",
-    "เรดาร์": "เรดาร์คลื่นมิลลิเมตร",
-    "เซนเซอร์": "เซนเซอร์อัลตราโซนิก",
-    "ขับอัตโนมัติ": "xngp",
-    "ประคองเลน": "ระบบช่วยควบคุมรถให้อยู่ในเลน",
-    "เตือนชน": "ระบบช่วยเตือนการชน",
-    "ช่วยจอด": "ระบบช่วยจอดรถอัจฉริยะ",
-    "ครูสคอนโทรล": "ระบบควบคุมความเร็วอัตโนมัติ",
-    
-    # 🛠️ หมวดตัวถัง / ไฟแสงสว่าง / และระบบกลไกรอบรถ
-    "ไฟหน้า": "โคมไฟหน้า",
-    "ไฟเลี้ยว": "สัญญาณไฟเลี้ยว",
-    "ไฟสูง": "ไฟสูงอัจฉริยะ",
-    "ยาง": "ความดันลมยาง",
-    "ลมยาง": "ระบบตรวจสอบความดันลมยาง(tpms)",
-    "ประตูท้าย": "ประตูท้ายไฟฟ้า",
-    "ฝากระโปรง": "ฝากระโปรงหน้า",
-    "เด้ง": "มือจับประตูมือจับ",
-    "ที่ปัดน้ำฝน": "ก้านปัดน้ำฝน",
-    "กระจกมองข้าง": "กระจกมองหลังภายนอก"
-}
+# =========================
+# LAZY LOAD PDF MANUALS
+# =========================
 
 pdf_data = []
-CACHE_FILE = "manuals/pdf_text_cache.json"  # 🟢 ข้อ 2: ไฟล์เก็บข้อมูลแคชข้อความ
 
 def load_pdf_manuals():
-    """🟢 ข้อ 2: ระบบตรวจเช็กข้อความจากแคช JSON สตาร์ทไว ไม่ค้าง ไม่กิน RAM บน Render"""
     global pdf_data
-    if pdf_data: 
+    if pdf_data:
         return
 
-    # ถ้ามีไฟล์แคช JSON อยู่แล้ว ดึงมาใช้ทันทีประหยัดเวลา
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                pdf_data = json.load(f)
-            return
-        except:
-            pass
-
-    # ถ้ายังไม่มีไฟล์แคช ค่อยแกะจาก PDF และเซฟเก็บไว้เป็น JSON
+    print("\n🔥 Loading PDF manuals into server memory...\n")
+    
     for model, path in PDFS.items():
-        if model == "SCREEN" or not os.path.exists(path): continue
+        if model == "SCREEN":
+            continue
+
+        print(f"📄 Loading {path}")
+        if not os.path.exists(path):
+            print(f"⚠️ Skip: File not found -> {path}")
+            continue
+
         try:
             doc = fitz.open(path)
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
                 text = page.get_text("text", sort=True)
-                # จัดการวรรณยุกต์ภาษาไทยจมลอย
+                # ลบช่องว่างระหว่างสระและพยัญชนะไทย เพื่อการค้นหาที่แม่นยำขึ้น
                 text = re.sub(r'([ก-๙])\s+([่้๊๋ัิีึืุู็์ำ])', r'\1\2', text)
-                pdf_data.append({"model": model, "page": page_num + 1, "text": text})
+                
+                pdf_data.append({
+                    "model": model,
+                    "page": page_num + 1,
+                    "text": text
+                })
         except Exception as e:
-            print(f"Error parsing {model}: {e}")
-            
-    # บันทึกข้อความลงแคช JSON
-    if pdf_data:
-        os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
-        with open(CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(pdf_data, f, ensure_ascii=False, indent=2)
+            print(f"❌ Error loading data from {path}: {e}")
 
-# 🟢 ข้อ 2: โหลดข้อมูลเตรียมพร้อมตั้งแต่เปิด Server
-with app.app_context():
-    load_pdf_manuals()
+    print("\n✅ All PDF Manuals Loaded Successfully\n")
+
+# =========================
+# WEB ROUTES
+# =========================
 
 @app.route("/")
 def home():
     return send_file("index.html")
+
 
 @app.route("/search", methods=["POST"])
 def search():
@@ -160,42 +113,68 @@ def search():
         data = request.json or {}
         query = data.get("query", "").strip()
         model = data.get("model", "")
-        if not model or model == "SCREEN" or not query: return jsonify([])
 
-        # 🟢 ข้อ 1: แปลงคำค้นหาจากระบบแปลงคำเหมือน (Synonym)
-        for wrong, right in SYNONYMS.items():
-            query = query.replace(wrong, right)
-            
-        # ใช้ pythainlp ตัดคำเพื่อทำ Fuzzy Search แยกคำสั้น-ยาว
-        query_words = word_tokenize(query.lower(), engine="newmm")
-        query_words = [w for w in query_words if w.strip() and len(w) > 1]
+        if not model or model == "SCREEN" or not query:
+            return jsonify([])
 
+        # แยก Query ออกเป็นคำๆ (ตัด space) เพื่อเพิ่มความยืดหยุ่นในการหา
+        query_terms = [t for t in re.split(r'\s+', query.lower()) if t]
         results = []
-        for item in pdf_data:
-            if item["model"] != model: continue
-            clean_text = item["text"].lower()
 
-            # เช็กความแม่นยำ (คำค้นหาตรงกับข้อความในคู่มือหน้าดังกล่าวเกิน 80% หรือไม่)
-            matches = sum(1 for word in query_words if word in clean_text)
-            if len(query_words) > 0 and (matches / len(query_words)) >= 0.8:
+        for item in pdf_data:
+            if item["model"] != model:
+                continue
+
+            content_lower = item["text"].lower()
+            
+            # นับจำนวนคำใน query ที่ปรากฏอยู่ในหน้านี้ (Score)
+            match_count = sum(1 for term in query_terms if term in content_lower)
+            
+            # ถ้าเจออย่างน้อย 1 คำ ให้เก็บผลลัพธ์
+            if match_count > 0:
+                original_text = item["text"]
+                # สร้าง Snippet รอบๆ คำแรกที่เจอ
+                first_term = query_terms[0]
+                match_idx = content_lower.find(first_term)
+                
+                if match_idx != -1:
+                    start_idx = max(0, match_idx - 200)
+                    end_idx = min(len(original_text), match_idx + 600)
+                    snippet = original_text[start_idx:end_idx]
+                    if start_idx > 0: snippet = "..." + snippet
+                    if end_idx < len(original_text): snippet = snippet + "..."
+                else:
+                    snippet = original_text[:800] + "..."
+
                 results.append({
                     "model": item["model"],
                     "page": item["page"],
-                    "text": item["text"],
-                    "score": matches
+                    "text": snippet,
+                    "score": match_count
                 })
-                
-        # เรียงหน้าคู่มือที่มีความเกี่ยวข้องสูงสุดขึ้นก่อน
-        results = sorted(results, key=lambda x: x["score"], reverse=True)
+
+        # เรียงลำดับตามความแม่นยำ (เจอคำมากที่สุดอยู่บนสุด)
+        results.sort(key=lambda x: x["score"], reverse=True)
         return jsonify(results[:10])
+
     except Exception as e:
-        print(f"Search error: {e}")
-        return jsonify([]), 500
+        print("❌ Search API System Error:", e)
+        return jsonify({"success": False, "error": "Internal Server Error"}), 500
+
+
+@app.route("/view/<model>")
+def view_pdf(model):
+    pdf_path = PDFS.get(model)
+    if not pdf_path or not os.path.exists(pdf_path):
+        return "PDF Manual Not Found", 404
+    return send_file(pdf_path, mimetype="application/pdf")
+
 
 @app.route("/view_chunk/<model>/<int:page>")
 def view_pdf_chunk(model, page):
     pdf_path = PDFS.get(model)
-    if not pdf_path or not os.path.exists(pdf_path): return "Not Found", 404
+    if not pdf_path or not os.path.exists(pdf_path):
+        return "PDF Manual Not Found", 404
 
     try:
         src_doc = fitz.open(pdf_path)
@@ -214,44 +193,38 @@ def view_pdf_chunk(model, page):
         src_doc.close()
         dest_doc.close()
         
-        return send_file(pdf_stream, mimetype="application/pdf")
-    except:
-        return "Error loading snippet", 500
+        return send_file(
+            pdf_stream,
+            mimetype="application/pdf",
+            download_name=f"{model}_page_{page}.pdf",
+            as_attachment=False
+        )
+    except Exception as e:
+        print(f"❌ Error cropping PDF: {e}")
+        return "Error loading PDF snippet", 500
 
-@app.route("/view/<model>")
-def view_pdf(model):
-    pdf_path = PDFS.get(model)
-    if not pdf_path or not os.path.exists(pdf_path): return "Not Found", 404
-    return send_file(pdf_path, mimetype="application/pdf")
 
 @app.route("/referral", methods=["POST"])
 def referral():
-    if not sheet: return jsonify({"success": False}), 500
+    if not sheet:
+        return jsonify({"success": False, "error": "Google Sheets offline"}), 500
+
     data = request.json or {}
+    your_name = data.get("your_name", "").strip()
+    your_phone = data.get("your_phone", "").strip()
+    friend_name = data.get("friend_name", "").strip()
+    friend_phone = data.get("friend_phone", "").strip()
+
+    if not (your_name and your_phone and friend_name and friend_phone):
+        return jsonify({"success": False, "error": "Required fields are missing"}), 400
+
     try:
-        # 🟢 ข้อ 3: ระบบตรวจสอบความถูกต้องของเบอร์โทรศัพท์มือถือ (ต้องขึ้นด้วย 0 และยาว 9-10 หลัก)
-        friend_phone = data.get("friend_phone", "").strip()
-        if not re.match(r'^0[0-9]{8,9}$', friend_phone):
-            return jsonify({"success": False, "message": "รูปแบบเบอร์โทรศัพท์ผู้ถูกแนะนำไม่ถูกต้อง"}), 400
-
-        # 🟢 ข้อ 5: ดึงเวลาปัจจุบันรูปแบบประเทศไทย (Timestamp)
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # บันทึกแถวข้อมูลลง Google Sheet โดยเอาวันเวลานำหน้าสุด
-        sheet.append_row([
-            timestamp, 
-            data.get("your_name"), 
-            data.get("your_phone"), 
-            data.get("friend_name"), 
-            friend_phone, 
-            data.get("model"), 
-            data.get("note")
-        ])
+        sheet.append_row([your_name, your_phone, friend_name, friend_phone, data.get("model", ""), data.get("note", "")])
         return jsonify({"success": True})
     except Exception as e:
-        print(f"Referral entry error: {e}")
-        return jsonify({"success": False}), 500
+        print("❌ Google Sheets Error:", e)
+        return jsonify({"success": False, "error": "Database error"}), 500
 
-main = app
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
