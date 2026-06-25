@@ -2,62 +2,396 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>XPENG RAMA 2 Service Support</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X-tech Rama 2 Service Support</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt&display=swap" rel="stylesheet">
-    <style>body{background:#0B0F19; color:#E2E8F0; font-family:'Prompt';} .glass{background:rgba(26,32,44,0.75); border:1px solid #2D3748; border-radius:24px;}</style>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body{
+            background: linear-gradient(to bottom, #0B0F19, #111827);
+            color:#E2E8F0;
+            font-family: 'Prompt', sans-serif;
+        }
+        .glass{
+            background: rgba(26,32,44,0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid #2D3748;
+            border-radius: 24px;
+        }
+        .btn-custom{
+            background: #FFFFFF;
+            color: #0B0F19;
+            font-weight: 600;
+            border: 1px solid #7EF29A;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 15px rgba(126, 242, 154, 0.35);
+        }
+        .btn-custom:hover{
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(126, 242, 154, 0.8);
+        }
+        .pdf-page-container {
+            transition: all 0.4s ease;
+            opacity: 0.35;
+            transform: scale(0.96);
+            filter: brightness(0.5);
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        .pdf-page-container.active {
+            opacity: 1 !important;
+            transform: scale(1);
+            filter: brightness(1);
+            border: 2px solid #7EF29A;
+            box-shadow: 0 0 30px rgba(126, 242, 154, 0.3);
+        }
+        canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+    </style>
 </head>
-<body class="py-12 px-6">
-    <div class="max-w-5xl mx-auto">
+
+<body class="min-h-screen py-12">
+    <div class="max-w-5xl mx-auto px-6">
+
+        <!-- HEADER -->
         <header class="text-center mb-12">
-            <h1 class="text-4xl font-extrabold text-white">XPENG RAMA 2</h1>
-            <p class="text-[#7EF29A]">SERVICE SUPPORT ASSISTANT</p>
+            <div class="bg-slate-950/60 rounded-[32px] px-20 py-10 inline-block shadow-lg mb-5 border border-slate-800">
+                <img src="static/logo.png" class="w-[320px] mx-auto" alt="XPENG Logo" style="filter: drop-shadow(0 0 15px rgba(126, 242, 154, 0.65));">
+            </div>
+            <h1 class="text-4xl font-extrabold tracking-widest text-white">X-TECH RAMA 2</h1>
+            <p class="text-sm font-medium tracking-[0.15em] mt-3" style="color:#7EF29A;">SERVICE SUPPORT ASSISTANT</p>
         </header>
 
-        <div class="glass p-8 mb-10">
+        <!-- SEARCH CONTAINER -->
+        <div class="glass p-8 shadow-2xl mb-10">
             <div class="flex flex-col md:flex-row gap-4">
-                <select id="carModel" onchange="toggleView()" class="bg-slate-900 border border-slate-700 rounded-xl p-4 text-white">
+                <select id="carModel" onchange="handleModelChange()" class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-4 text-white md:w-1/3 focus:outline-none">
                     <option value="G6">XPENG G6</option>
                     <option value="X9_2026">XPENG X9 2026</option>
-                    <option value="FREQUENT">🛠️ การตั้งค่าที่ใช้บ่อย</option>
+                    <option value="SCREEN">🛠️ การตั้งค่าที่ใช้บ่อย</option>
                 </select>
                 
-                <div id="searchArea" class="flex flex-grow gap-4">
-                    <input type="text" id="searchInput" class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-6 py-4" placeholder="ค้นหาคู่มือ...">
-                    <button onclick="doSearch()" class="bg-white text-black px-10 rounded-xl font-bold">🔍 ค้นหา</button>
+                <div id="searchFields" class="flex flex-col md:flex-row gap-4 flex-grow">
+                    <input type="text" id="searchInput" placeholder="ค้นหาคู่มือเทคนิค..." class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-6 py-4 text-white focus:outline-none">
+                    <button onclick="doSearch()" class="btn-custom px-10 py-4 rounded-xl">🔍 ค้นหา</button>
+                </div>
+
+                <div id="directOpenFields" class="hidden flex-grow">
+                    <button onclick="openFullPdfDirect('SCREEN')" class="btn-custom w-full py-4 rounded-xl text-center text-lg flex items-center justify-center gap-2" style="background:#7EF29A; color:#0B0F19;">
+                        📖 เปิดดูคู่มือการตั้งค่าด่วนทันที
+                    </button>
                 </div>
             </div>
         </div>
 
-        <div id="resultsList" class="space-y-4"></div>
+        <div id="statusMsg" class="text-center text-slate-500 mb-8">ระบบพร้อมค้นหาข้อมูล X-tech</div>
+
+        <!-- RESULTS AREA -->
+        <div id="resArea" class="hidden mb-12">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-white">ผลการค้นหาคู่มือ</h2>
+            </div>
+            <div id="resultsList" class="space-y-4"></div>
+        </div>
+
+        <!-- แผงระบบแนะนำเพื่อน (MGM) -->
+        <div class="glass p-8 shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                🤝 <span style="color:#7EF29A;">ระบบแนะนำลูกค้า (MGM Referral)</span>
+            </h2>
+            <p class="text-xs text-slate-400 mb-6">สำหรับลูกค้าที่ออกรถไปแล้ว แนะนำเพื่อนหรือคนรู้จักที่สนใจรถยนต์ XPENG (ข้อมูลจะถูกบันทึกส่งตรงเข้าตารางบริษัท)</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">ชื่อ-นามสกุล ของท่าน (ผู้แนะนำ/ลูกค้าเก่า)</label>
+                    <input type="text" id="refYourName" placeholder="ระบุชื่อ-นามสกุลของท่าน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">เบอร์โทรศัพท์ของท่าน</label>
+                    <input type="tel" id="refYourPhone" placeholder="ระบุเบอร์โทรศัพท์ของท่าน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">ชื่อ-นามสกุล ของเพื่อนที่ท่านแนะนำ (ลูกค้าใหม่)</label>
+                    <input type="text" id="refFriendName" placeholder="ระบุชื่อ-นามสกุลของเพื่อน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">เบอร์โทรศัพท์ของเพื่อนที่ท่านแนะนำ</label>
+                    <input type="tel" id="refFriendPhone" placeholder="ระบุเบอร์โทรศัพท์ของเพื่อน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">รุ่นรถยนต์ที่เพื่อนของท่านสนใจ</label>
+                    <select id="refModel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                        <option value="G6">XPENG G6</option>
+                        <option value="X9_2026">XPENG X9 2026</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">ข้อมูลหรือหมายเหตุเพิ่มเติม</label>
+                    <input type="text" id="refNote" placeholder="ระบุข้อมูลเพิ่มเติม (ถ้ามี)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none">
+                </div>
+            </div>
+
+            <button onclick="submitReferral()" class="btn-custom w-full py-4 rounded-xl text-center">📤 ส่งข้อมูลแนะนำเพื่อน</button>
+            <div id="refStatus" class="text-center text-sm mt-3 font-semibold"></div>
+        </div>
+
+    </div>
+
+    <!-- POPUP MODAL สำหรับฉาย PDF -->
+    <div id="pdfModal" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col items-center justify-center p-2 sm:p-4">
+        <div class="w-full max-w-4xl flex justify-between items-center mb-2 px-2">
+            <h3 id="modalTitle" class="text-sm sm:text-lg font-bold text-white truncate max-w-[70%]">📄 หน้าคู่มือ</h3>
+            <button onclick="closeModal()" class="bg-red-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-red-700 transition text-sm">✕ ปิดหน้าต่าง</button>
+        </div>
+        <div id="pdfViewerContainer" class="w-full max-w-4xl flex-grow overflow-y-auto space-y-6 p-2 sm:p-4 bg-slate-950 rounded-2xl border border-slate-800">
+            <div id="loadingPdf" class="text-center py-20 text-green-400">⏳ กำลังเรนเดอร์แผ่นคู่มือและระบบไฟสปอตไลท์...</div>
+        </div>
     </div>
 
     <script>
+        pdfjsLib.GlobalWorkerOptions.workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         const API = "https://xpeng-rama2.onrender.com";
-        
-        function toggleView() {
-            const isFreq = document.getElementById("carModel").value === "FREQUENT";
-            document.getElementById("searchArea").classList.toggle("hidden", isFreq);
-            if(isFreq) window.open(`${API}/view/FREQUENT`, '_blank');
+
+        function handleModelChange() {
+            const model = document.getElementById("carModel").value;
+            const searchFields = document.getElementById("searchFields");
+            const directFields = document.getElementById("directOpenFields");
+            const status = document.getElementById("statusMsg");
+            const area = document.getElementById("resArea");
+
+            if (model === "SCREEN") {
+                searchFields.classList.add("hidden");
+                directFields.classList.remove("hidden");
+                status.innerHTML = "🛠️ โหมดเปิดหน้าจอการตั้งค่าที่ใช้บ่อยด่วน (คลิกเปิดอ่านได้ทันที)";
+                area.classList.add("hidden");
+            } else {
+                searchFields.classList.remove("hidden");
+                directFields.classList.add("hidden");
+                status.innerHTML = "ระบบพร้อมค้นหาข้อมูล X-tech";
+            }
         }
 
-        async function doSearch() {
-            const query = document.getElementById("searchInput").value;
+        async function doSearch(){
+            const query = document.getElementById("searchInput").value.trim();
             const model = document.getElementById("carModel").value;
-            const res = await fetch(`${API}/search`, {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({query, model})
-            });
-            const data = await res.json();
+            const status = document.getElementById("statusMsg");
             const list = document.getElementById("resultsList");
-            list.innerHTML = data.map(item => `
-                <div class="glass p-5">
-                    <div class="text-green-400 font-bold">หน้า ${item.page}</div>
-                    <div class="text-sm mt-2">${item.text}</div>
-                </div>
-            `).join('');
+            const area = document.getElementById("resArea");
+
+            if(!query){ alert("กรุณาพิมพ์คำค้นหา"); return; }
+            status.innerHTML = "⏳ กำลังค้นข้อมูลคำตอบ...";
+            list.innerHTML = "";
+            area.classList.add("hidden");
+
+            try{
+                const response = await fetch(`${API}/search`, {
+                    method:"POST",
+                    headers:{ "Content-Type":"application/json" },
+                    body:JSON.stringify({ query, model })
+                });
+                const data = await response.json();
+                status.innerHTML = "";
+                area.classList.remove("hidden");
+
+                if(data.length === 0){
+                    list.innerHTML = `<div class="glass p-10 text-center text-gray-500">ไม่พบข้อมูลในระบบ X-tech</div>`;
+                    return;
+                }
+
+                data.forEach((item, index) => {
+                    let snippetText = item.text || "";
+                    try {
+                        const matchIdx = snippetText.toLowerCase().indexOf(query.toLowerCase());
+                        if (matchIdx !== -1) {
+                            const startIdx = Math.max(0, matchIdx - 100);
+                            const endIdx = Math.min(snippetText.length, matchIdx + 200);
+                            snippetText = snippetText.substring(startIdx, endIdx);
+                            if (startIdx > 0) snippetText = "..." + snippetText;
+                            if (endIdx < item.text.length) snippetText = snippetText + "...";
+                        } else {
+                            snippetText = snippetText.substring(0, 300) + "...";
+                        }
+
+                        const chars = query.split('').map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+                        const fuzzyPattern = chars.join('\\s*');
+                        const regex = new RegExp(`(${fuzzyPattern})`, "gi");
+                        snippetText = snippetText.replace(regex, match => `<mark style="background:#facc15; color:#000; padding:2px 4px; border-radius:4px; font-weight:bold;">${match}</mark>`);
+                    } catch (e) {
+                        snippetText = (item.text || "").substring(0, 200) + "...";
+                    }
+
+                    const badgeColor = item.model === "G6" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "bg-purple-500/20 text-purple-400 border border-purple-500/30";
+
+                    const card = document.createElement("div");
+                    card.className = "glass p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg border border-slate-800";
+                    
+                    // 🟢 แก้ไข syntax จาก {item.page} เป็น ${item.page} ถูกหลัก JavaScript แน่นอนครับ
+                    card.innerHTML = `
+                        <div class="flex-grow w-full">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-xs px-2.5 py-1 rounded-md font-bold ${badgeColor}">XPENG ${item.model}</span>
+                                <div class="text-xs text-green-400 font-semibold">📄 หน้าที่ ${item.page}</div>
+                            </div>
+                            <div class="relative text-slate-300 text-sm leading-relaxed whitespace-pre-line bg-slate-900/40 p-3 rounded-xl border border-slate-800/60">
+                                <div>${snippetText}</div>
+                            </div>
+                        </div>
+                        <button onclick="openPdfSpotlight('${item.model}', ${item.page})" class="btn-custom w-full md:w-auto px-6 py-3 rounded-xl text-sm whitespace-nowrap self-stretch md:self-auto text-center">📄 เปิดดูหน้าด่วน</button>
+                    `;
+                    list.appendChild(card);
+                });
+            }catch{
+                status.innerHTML = `❌ เกิดข้อผิดพลาด`;
+            }
+        }
+
+        async function openPdfSpotlight(model, page) {
+            renderPdfViewer(`${API}/view_chunk/${model}/${page}`, page, true);
+        }
+
+        async function openFullPdfDirect(model) {
+            renderPdfViewer(`${API}/view/${model}`, 1, false);
+        }
+
+        async function renderPdfViewer(url, page, isChunk) {
+            const modal = document.getElementById("pdfModal");
+            const container = document.getElementById("pdfViewerContainer");
+            document.getElementById("modalTitle").innerHTML = isChunk ? `📄 หน้าคู่มือตัดด่วน (เล่มหลักหน้าที่: ${page})` : `🛠️ คู่มือ: การตั้งค่าที่ใช้บ่อย`;
+            
+            modal.classList.remove("hidden");
+            container.innerHTML = `<div id="loadingPdf" class="text-center py-20 text-green-400">⏳ กำลังโหลดข้อมูลไฟล์คู่มือและระบบไฟนำทางระดับ Ultra HD...</div>`;
+
+            try {
+                const loadingTask = pdfjsLib.getDocument(url);
+                const pdf = await loadingTask.promise;
+                container.innerHTML = "";
+
+                const startPageOrig = isChunk ? Math.max(1, page - 2) : 1;
+                const targetIdxInChunk = isChunk ? (page - startPageOrig + 1) : 1;
+                const containerWidth = container.clientWidth - 32;
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const pdfPage = await pdf.getPage(i);
+                    const unscaledViewport = pdfPage.getViewport({ scale: 1.0 });
+                    
+                    const dynamicScale = containerWidth / unscaledViewport.width;
+                    const finalScale = dynamicScale > 1.3 ? 1.3 : dynamicScale;
+
+                    const screenRatio = window.devicePixelRatio || 1;
+                    const outputScale = screenRatio > 2 ? 3.0 : 2.5; 
+                    
+                    const viewport = pdfPage.getViewport({ scale: finalScale });
+
+                    const pageWrapper = document.createElement("div");
+                    pageWrapper.className = `pdf-page-container mx-auto flex flex-col items-center p-2 bg-white rounded-lg shadow-xl ${(!isChunk || i === targetIdxInChunk) ? 'active' : ''}`;
+                    pageWrapper.setAttribute("data-page-index", i);
+
+                    const canvas = document.createElement("canvas");
+                    const context = canvas.getContext("2d");
+                    
+                    canvas.width = Math.floor(viewport.width * outputScale);
+                    canvas.height = Math.floor(viewport.height * outputScale);
+                    
+                    context.transform(outputScale, 0, 0, outputScale, 0, 0);
+
+                    await pdfPage.render({ canvasContext: context, viewport: viewport }).promise;
+                    
+                    const pageLabel = document.createElement("div");
+                    pageLabel.className = "text-center text-xs font-bold text-slate-800 mt-2";
+                    pageLabel.innerHTML = isChunk ? `หน้าคู่มือเล่มจริงที่: ${startPageOrig + i - 1}` : `แผ่นคู่มือแนะนำการตั้งค่าแผงควบคุม หน้าที่: ${i}`;
+
+                    pageWrapper.appendChild(canvas);
+                    pageWrapper.appendChild(pageLabel);
+                    container.appendChild(pageWrapper);
+
+                    if (isChunk && i === targetIdxInChunk) {
+                        setTimeout(() => {
+                            pageWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 500);
+                    }
+                }
+
+                if (isChunk) {
+                    const pages = document.querySelectorAll('.pdf-page-container');
+                    const observerOptions = { root: container, rootMargin: '-30% 0px -30% 0px', threshold: 0.4 };
+                    const observer = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                pages.forEach(p => p.classList.remove('active'));
+                                entry.target.classList.add('active');
+                            }
+                        });
+                    }, observerOptions);
+                    pages.forEach(p => observer.observe(p));
+                }
+
+            } catch (error) {
+                container.innerHTML = `<div class="text-center py-20 text-red-500">❌ ไม่สามารถโหลดไฟล์คู่มือได้</div>`;
+            }
+        }
+
+        async function submitReferral() {
+            const your_name = document.getElementById("refYourName").value.trim();
+            const your_phone = document.getElementById("refYourPhone").value.trim();
+            const friend_name = document.getElementById("refFriendName").value.trim();
+            const friend_phone = document.getElementById("refFriendPhone").value.trim();
+            const model = document.getElementById("refModel").value;
+            const note = document.getElementById("refNote").value.trim();
+            const status = document.getElementById("refStatus");
+
+            if (!your_name || !your_phone || !friend_name || !friend_phone) {
+                alert("กรุณากรอกข้อมูลให้ครบถ้วนในช่องที่มีความจำเป็น");
+                return;
+            }
+
+            status.style.color = "#facc15";
+            status.innerHTML = "⏳ กำลังบันทึกข้อมูลและวิเคราะห์เบอร์โทรศัพท์... ";
+
+            try {
+                const response = await fetch(`${API}/referral`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ your_name, your_phone, friend_name, friend_phone, model, note })
+                });
+                
+                const resData = await response.json();
+                if (response.ok && resData.success) {
+                    status.style.color = "#7EF29A";
+                    status.innerHTML = "✅ บันทึกข้อมูลการแนะนำเพื่อนสำเร็จเรียบร้อยแล้ว ขอบพระคุณที่ไว้วางใจ XPENG Rama 2 ครับ!";
+                    document.getElementById("refFriendName").value = "";
+                    document.getElementById("refFriendPhone").value = "";
+                    document.getElementById("refNote").value = "";
+                } else {
+                    status.style.color = "#ef4444";
+                    status.innerHTML = `❌ ${resData.message || "เกิดปัญหาฝั่งฐานข้อมูล กรุณาลองใหม่อีกครั้ง"}`;
+                }
+            } catch {
+                status.style.color = "#ef4444";
+                status.innerHTML = "❌ ระบบออนไลน์ขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ต";
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const searchInput = document.getElementById("searchInput");
+            if(searchInput) {
+                searchInput.addEventListener("keypress", (e) => {
+                    if (e.key === "Enter") { doSearch(); }
+                });
+            }
+        });
+
+        function closeModal() {
+            document.getElementById("pdfModal").classList.add("hidden");
         }
     </script>
 </body>

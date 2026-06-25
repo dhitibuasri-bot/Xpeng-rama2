@@ -84,7 +84,6 @@ def load_pdf_manuals():
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
                 text = page.get_text("text", sort=True)
-                # ลบช่องว่างระหว่างสระและพยัญชนะไทย เพื่อการค้นหาที่แม่นยำขึ้น
                 text = re.sub(r'([ก-๙])\s+([่้๊๋ัิีึืุู็์ำ])', r'\1\2', text)
                 
                 pdf_data.append({
@@ -117,25 +116,18 @@ def search():
         if not model or model == "SCREEN" or not query:
             return jsonify([])
 
-        # แยก Query ออกเป็นคำๆ (ตัด space) เพื่อเพิ่มความยืดหยุ่นในการหา
-        query_terms = [t for t in re.split(r'\s+', query.lower()) if t]
         results = []
+        clean_query = re.sub(r'\s+', '', query.lower())
 
         for item in pdf_data:
             if item["model"] != model:
                 continue
 
-            content_lower = item["text"].lower()
-            
-            # นับจำนวนคำใน query ที่ปรากฏอยู่ในหน้านี้ (Score)
-            match_count = sum(1 for term in query_terms if term in content_lower)
-            
-            # ถ้าเจออย่างน้อย 1 คำ ให้เก็บผลลัพธ์
-            if match_count > 0:
+            clean_text = re.sub(r'\s+', '', item["text"].lower())
+
+            if clean_query in clean_text:
                 original_text = item["text"]
-                # สร้าง Snippet รอบๆ คำแรกที่เจอ
-                first_term = query_terms[0]
-                match_idx = content_lower.find(first_term)
+                match_idx = original_text.lower().find(query.lower())
                 
                 if match_idx != -1:
                     start_idx = max(0, match_idx - 200)
@@ -149,12 +141,9 @@ def search():
                 results.append({
                     "model": item["model"],
                     "page": item["page"],
-                    "text": snippet,
-                    "score": match_count
+                    "text": snippet
                 })
 
-        # เรียงลำดับตามความแม่นยำ (เจอคำมากที่สุดอยู่บนสุด)
-        results.sort(key=lambda x: x["score"], reverse=True)
         return jsonify(results[:10])
 
     except Exception as e:
@@ -164,12 +153,14 @@ def search():
 
 @app.route("/view/<model>")
 def view_pdf(model):
+    """เส้นทางเดิมสำหรับเปิดไฟล์เต็ม (ใช้กับ SCREEN เล่มสั้น)"""
     pdf_path = PDFS.get(model)
     if not pdf_path or not os.path.exists(pdf_path):
         return "PDF Manual Not Found", 404
     return send_file(pdf_path, mimetype="application/pdf")
 
 
+# ⚡ ฟังก์ชันใหม่: ตัดเฉพาะหน้าผลลัพธ์และหน้ารอบๆ (-2 และ +2 หน้า) ส่งให้หน้าบ้านเปิดอ่านแบบพริบตาเดียว
 @app.route("/view_chunk/<model>/<int:page>")
 def view_pdf_chunk(model, page):
     pdf_path = PDFS.get(model)
@@ -180,12 +171,18 @@ def view_pdf_chunk(model, page):
         src_doc = fitz.open(pdf_path)
         total_pages = len(src_doc)
         
+        # คำนวณหาช่วงหน้าที่จะตัด (-2 หน้า และ +2 หน้าจากหน้าปัจจุบัน)
+        # ตัวอย่าง: ค้นเจอหน้า 10 ระบบจะตัดหน้า 8, 9, 10, 11, 12 มาให้ดู
         start_page = max(1, page - 2)
         end_page = min(total_pages, page + 2)
         
+        # สร้างเอกสาร PDF ชิ้นใหม่ใน Memory
         dest_doc = fitz.open()
+        
+        # ดึงหน้าเฉพาะช่วงที่เลือกจากเล่มหลัก (fitz ใช้เลขหน้าเริ่มจาก 0)
         dest_doc.insert_pdf(src_doc, from_page=start_page - 1, to_page=end_page - 1)
         
+        # แปลงไฟล์เป็น Byte Stream เพื่อส่งออกโดยไม่ต้องเขียนไฟล์ลงดิสก์เซิร์ฟเวอร์
         pdf_stream = io.BytesIO()
         dest_doc.save(pdf_stream)
         pdf_stream.seek(0)
@@ -193,12 +190,16 @@ def view_pdf_chunk(model, page):
         src_doc.close()
         dest_doc.close()
         
+        # คำนวณหาหน้าเป้าหมายเพื่อให้เบราเซอร์เปิดไปถูกหน้าหลักที่คนหาเจอพอดี
+        target_view_page = page - start_page + 1
+        
         return send_file(
             pdf_stream,
             mimetype="application/pdf",
             download_name=f"{model}_page_{page}.pdf",
             as_attachment=False
         )
+        
     except Exception as e:
         print(f"❌ Error cropping PDF: {e}")
         return "Error loading PDF snippet", 500
