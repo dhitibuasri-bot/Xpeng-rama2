@@ -72,18 +72,22 @@
                 <select id="carModel" onchange="handleModelChange()" class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-4 text-white md:w-1/3 focus:outline-none">
                     <option value="G6">XPENG G6</option>
                     <option value="X9_2026">XPENG X9 2026</option>
-                    <option value="SCREEN">🛠️ การตั้งค่าที่ใช้บ่อย</option>
                     <option value="FREQUENT">🛠️ การตั้งค่าที่ใช้บ่อย</option>
                 </select>
-                
+
                 <div id="searchFields" class="flex flex-col md:flex-row gap-4 flex-grow">
                     <input type="text" id="searchInput" placeholder="ค้นหาคู่มือเทคนิค..." class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-6 py-4 text-white focus:outline-none">
                     <button onclick="doSearch()" class="btn-custom px-10 py-4 rounded-xl">🔍 ค้นหา</button>
                 </div>
 
                 <div id="directOpenFields" class="hidden flex-grow">
-                    <button onclick="openFullPdfDirect('SCREEN')" class="btn-custom w-full py-4 rounded-xl text-center text-lg flex items-center justify-center gap-2" style="background:#7EF29A; color:#0B0F19;">
-                        📖 เปิดดูคู่มือการตั้งค่าด่วนทันที
+                  <button
+    onclick="openFullPdfDirect('FREQUENT')"
+    class="btn-custom w-full py-4 rounded-xl text-center text-lg flex items-center justify-center gap-2"
+    style="background:#7EF29A; color:#0B0F19;"
+>
+    📖 เปิดดูคู่มือการตั้งค่าด่วนทันที
+</button>
                     </button>
                 </div>
             </div>
@@ -170,7 +174,7 @@
             const status = document.getElementById("statusMsg");
             const area = document.getElementById("resArea");
 
-            if (model === "SCREEN") {
+           if (model === "FREQUENT") {
                 searchFields.classList.add("hidden");
                 directFields.classList.remove("hidden");
                 status.innerHTML = "🛠️ โหมดเปิดหน้าจอการตั้งค่าที่ใช้บ่อยด่วน (คลิกเปิดอ่านได้ทันที)";
